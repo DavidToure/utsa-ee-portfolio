@@ -1,0 +1,484 @@
+<!-- design plan
+Color: --bg #0b1220 (dark slate) / #f7f8fa (light) surface; --panel one step up;
+  categorical (Okabe-Ito, CVD-safe): g(t)=#0072B2 blue, u(t)=#E69F00 orange, y(t)=#009E73 green;
+  status: stable=#009E73 green, unstable=#D55E00 vermillion (distinct role from categorical green above,
+  never shown in the same panel together so no clash).
+Type: IBM Plex Sans (UI/labels) + IBM Plex Mono (equations, matrices, numeric readouts) -
+  both from Google Fonts, a pairing native to engineering/technical tools rather than a generic choice.
+Layout: single column on phone, two-panel grid on desktop. Panel 1 = convolution sliding-window demo
+  (slider scrubs t, SVG shows g(tau) fixed + u(t-tau) shifting + shaded overlap, second small plot traces
+  y(t) up to the scrubbed point). Panel 2 = second-order system explorer (two sliders for a1,a0 default
+  to HW1's 2,-3; live pole-zero map, live impulse-response curve, live A/B/C/D readout, stability badge).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LTI System Explorer</title>
+<meta name="description" content="Interactive companion to EE 5143 Homework 1: convolution as a sliding window, and how a second-order system's poles, stability, and state-space form all come from the same two numbers." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --panel: #ffffff;
+    --panel-2: #eef0f4;
+    --border: #d9dce3;
+    --text: #171a21;
+    --text-2: #4b5160;
+    --text-muted: #868d9c;
+    --accent: #0072B2;
+    --accent-ink: #ffffff;
+    --g-color: #0072B2;
+    --u-color: #E69F00;
+    --y-color: #009E73;
+    --stable: #009E73;
+    --unstable: #D55E00;
+    --grid-line: #e2e5eb;
+    --shadow: 0 1px 2px rgba(20,24,34,0.06), 0 8px 24px rgba(20,24,34,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1220;
+      --panel: #121a2b;
+      --panel-2: #0f1626;
+      --border: #263049;
+      --text: #e7eaf2;
+      --text-2: #aab2c5;
+      --text-muted: #6d7690;
+      --accent: #4fb3e8;
+      --accent-ink: #061018;
+      --g-color: #4fb3e8;
+      --u-color: #f0b84f;
+      --y-color: #35c99a;
+      --stable: #35c99a;
+      --unstable: #e8784f;
+      --grid-line: #1c2438;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b1220;
+    --panel: #121a2b;
+    --panel-2: #0f1626;
+    --border: #263049;
+    --text: #e7eaf2;
+    --text-2: #aab2c5;
+    --text-muted: #6d7690;
+    --accent: #4fb3e8;
+    --accent-ink: #061018;
+    --g-color: #4fb3e8;
+    --u-color: #f0b84f;
+    --y-color: #35c99a;
+    --stable: #35c99a;
+    --unstable: #e8784f;
+    --grid-line: #1c2438;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", -apple-system, sans-serif;
+    padding: 24px 16px 56px;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; }
+
+  header.page { margin-bottom: 28px; }
+  .eyebrow {
+    font-size: 12.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    font-size: clamp(26px, 4vw, 34px);
+    margin: 6px 0 8px;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .subtitle { color: var(--text-2); font-size: 15.5px; max-width: 72ch; line-height: 1.55; }
+  .origin {
+    margin-top: 10px; font-size: 13px; color: var(--text-muted);
+  }
+
+  .grid {
+    display: grid; grid-template-columns: 1fr; gap: 20px;
+  }
+  @media (min-width: 980px) {
+    .grid { grid-template-columns: 1fr 1fr; align-items: start; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 20px 22px;
+    box-shadow: var(--shadow);
+  }
+  .panel h2 {
+    font-size: 17px; margin: 0 0 4px; letter-spacing: -0.005em;
+  }
+  .panel .desc { color: var(--text-2); font-size: 13.5px; line-height: 1.5; margin-bottom: 14px; }
+
+  .eq-block {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 13.5px; color: var(--text); margin-bottom: 14px;
+    overflow-x: auto;
+  }
+
+  svg.chart { width: 100%; height: auto; display: block; }
+  .chart-label { font-size: 11px; fill: var(--text-muted); font-family: "IBM Plex Mono", monospace; }
+  .chart-title { font-size: 12.5px; fill: var(--text-2); font-weight: 600; }
+  .axis-line { stroke: var(--grid-line); stroke-width: 1; }
+  .grid-line { stroke: var(--grid-line); stroke-width: 1; }
+
+  .slider-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .slider-row .top { display: flex; justify-content: space-between; align-items: baseline; }
+  .slider-row label { font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .slider-row .value { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--text); }
+  input[type="range"] {
+    width: 100%; appearance: none; height: 6px; border-radius: 3px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    accent-color: var(--accent);
+  }
+
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 6px 0 12px; }
+  .legend .item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-2); }
+  .legend .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  .matrix-row { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
+  .matrix-card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+  .matrix-card .k { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .matrix-card .v { font-family: "IBM Plex Mono", monospace; font-size: 13.5px; white-space: pre; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    font-size: 12.5px; font-weight: 600;
+  }
+  .badge.stable { background: color-mix(in srgb, var(--stable) 16%, transparent); color: var(--stable); }
+  .badge.unstable { background: color-mix(in srgb, var(--unstable) 16%, transparent); color: var(--unstable); }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  footer.page { margin-top: 30px; font-size: 12.5px; color: var(--text-muted); text-align: center; }
+  footer.page a { color: var(--text-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <div class="eyebrow">EE 5143 &middot; Linear Systems and Control</div>
+    <h1>LTI System Explorer</h1>
+    <p class="subtitle">
+      Two views of the same idea from Homework 1: a system is completely described either by its
+      <strong>impulse response</strong> (convolve it with any input) or by its <strong>poles</strong>
+      (a transfer function, or an equivalent state-space form). Scrub the slider on the left to watch
+      a convolution happen; drag the sliders on the right to see how two coefficients decide everything
+      about a second-order system &mdash; including whether it's stable.
+    </p>
+    <div class="origin">Companion to Problems 4, 5, and 6 of Homework 1 &middot; David Toure</div>
+  </header>
+
+  <div class="grid">
+
+    <!-- PANEL 1: CONVOLUTION -->
+    <section class="panel">
+      <h2>Problem 4 &mdash; convolution as a sliding window</h2>
+      <p class="desc">
+        g(&tau;) is fixed. u(t&minus;&tau;) is u(&tau;) flipped and slid by t. Their product, integrated
+        over &tau;, is y(t) &mdash; the shaded overlap below is exactly that product at the scrubbed t.
+      </p>
+
+      <div class="legend">
+        <span class="item"><span class="swatch" style="background:var(--g-color)"></span>g(&tau;) &mdash; impulse response</span>
+        <span class="item"><span class="swatch" style="background:var(--u-color)"></span>u(t&minus;&tau;) &mdash; shifted, flipped input</span>
+        <span class="item"><span class="swatch" style="background:var(--y-color)"></span>y(t) &mdash; response so far</span>
+      </div>
+
+      <svg class="chart" id="convOverlap" viewBox="0 0 480 190" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg class="chart" id="convOutput" viewBox="0 0 480 130" preserveAspectRatio="xMidYMid meet" style="margin-top:6px"></svg>
+
+      <div class="slider-row" style="margin-top:14px">
+        <div class="top"><label for="tSlider">t (scrub position)</label><span class="value" id="tVal">1.00</span></div>
+        <input type="range" id="tSlider" min="-0.3" max="4.3" step="0.02" value="1.0" />
+      </div>
+      <div class="eq-block mono" id="convReadout">y(1.00) = 0.500</div>
+    </section>
+
+    <!-- PANEL 2: STATE SPACE / POLES -->
+    <section class="panel">
+      <h2>Problems 5 &amp; 6 &mdash; poles, stability, and state space</h2>
+      <p class="desc">
+        System: y&Prime; + a&#8321;&middot;y&prime; + a&#8320;&middot;y = u. Defaults to Homework 1's own
+        system (a&#8321;=2, a&#8320;=&minus;3, i.e. y&Prime;+2y&prime;&minus;3y=u). Drag either slider to
+        see a different system's poles, impulse response, and state-space matrices &mdash; computed live
+        from the same two formulas used in the write-up.
+      </p>
+
+      <div class="slider-row">
+        <div class="top"><label for="a1Slider">a&#8321; (coefficient of y&prime;)</label><span class="value" id="a1Val">2.00</span></div>
+        <input type="range" id="a1Slider" min="-4" max="4" step="0.05" value="2" />
+      </div>
+      <div class="slider-row">
+        <div class="top"><label for="a0Slider">a&#8320; (coefficient of y)</label><span class="value" id="a0Val">-3.00</span></div>
+        <input type="range" id="a0Slider" min="-6" max="6" step="0.05" value="-3" />
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+        <span class="badge" id="stabilityBadge"><span class="dot"></span><span id="stabilityText">unstable</span></span>
+        <span class="mono" id="poleReadout" style="font-size:12.5px; color:var(--text-2)"></span>
+      </div>
+
+      <svg class="chart" id="poleZero" viewBox="0 0 220 190" preserveAspectRatio="xMidYMid meet" style="width:46%; float:left;"></svg>
+      <svg class="chart" id="impulsePlot" viewBox="0 0 260 190" preserveAspectRatio="xMidYMid meet" style="width:52%; float:right;"></svg>
+      <div style="clear:both"></div>
+
+      <div class="matrix-row">
+        <div class="matrix-card"><div class="k">H(s)</div><div class="v" id="hsReadout"></div></div>
+        <div class="matrix-card"><div class="k">A</div><div class="v" id="aReadout"></div></div>
+        <div class="matrix-card"><div class="k">B</div><div class="v" id="bReadout"></div></div>
+        <div class="matrix-card"><div class="k">C, D</div><div class="v" id="cdReadout"></div></div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="page">Built from the same closed-form solutions in the Homework 1 write-up &mdash; every number here matches, and was checked against the analytic derivation with a small pytest suite.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- shared helpers ----------
+  function makeSVG(id) { return document.getElementById(id); }
+  function clear(svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+  function el(tag, attrs) {
+    const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  function polyline(points, stroke, width, extra) {
+    const pts = points.map(p => p[0].toFixed(2) + "," + p[1].toFixed(2)).join(" ");
+    const a = Object.assign({ points: pts, fill: "none", stroke: stroke, "stroke-width": width, "stroke-linecap": "round", "stroke-linejoin": "round" }, extra || {});
+    return el("polyline", a);
+  }
+
+  // ================= PANEL 1: CONVOLUTION =================
+  function gPulse(tau) {
+    if (tau >= 0 && tau <= 1) return tau;
+    if (tau > 1 && tau <= 2) return 2 - tau;
+    return 0;
+  }
+  function uWave(tau) {
+    if (tau >= 0 && tau < 1) return 1;
+    if (tau >= 1 && tau < 2) return -1;
+    return 0;
+  }
+  function yAnalytic(t) {
+    if (t < 0 || t > 4) return 0;
+    if (t <= 1) return t * t / 2;
+    if (t <= 2) return -1.5 * t * t + 4 * t - 2;
+    if (t <= 3) return 1.5 * t * t - 8 * t + 10;
+    return -0.5 * t * t + 4 * t - 8;
+  }
+
+  const overlapSVG = makeSVG("convOverlap");
+  const outputSVG = makeSVG("convOutput");
+  const tSlider = document.getElementById("tSlider");
+  const tVal = document.getElementById("tVal");
+  const convReadout = document.getElementById("convReadout");
+
+  // overlap plot geometry
+  const OW = 480, OH = 190, OPAD = { l: 34, r: 14, t: 14, b: 22 };
+  const tauMin = -0.6, tauMax = 4.6;
+  function ox(tau) { return OPAD.l + (tau - tauMin) / (tauMax - tauMin) * (OW - OPAD.l - OPAD.r); }
+  function oy(v) { return (OH - OPAD.b) - (v + 1.3) / 2.6 * (OH - OPAD.t - OPAD.b); }
+
+  function drawOverlap(t) {
+    clear(overlapSVG);
+    overlapSVG.setAttribute("viewBox", "0 0 " + OW + " " + OH);
+    // axes
+    overlapSVG.appendChild(el("line", { x1: ox(tauMin), y1: oy(0), x2: ox(tauMax), y2: oy(0), class: "axis-line" }));
+    overlapSVG.appendChild(el("text", { x: OW - OPAD.r, y: oy(0) - 4, class: "chart-label", "text-anchor": "end" })).textContent = "τ";
+
+    const N = 300;
+    const gPts = [], uPts = [];
+    let overlapPts = [];
+    for (let i = 0; i <= N; i++) {
+      const tau = tauMin + (tauMax - tauMin) * i / N;
+      gPts.push([ox(tau), oy(gPulse(tau))]);
+      uPts.push([ox(tau), oy(uWave(t - tau))]);
+    }
+    overlapSVG.appendChild(polyline(gPts, "var(--g-color)", 2.4));
+    overlapSVG.appendChild(polyline(uPts, "var(--u-color)", 2.4, { "stroke-dasharray": "0" }));
+
+    // shaded product region: fill where both nonzero, sign-aware (simple area fill of g*u sign)
+    for (let i = 0; i < 250; i++) {
+      const tau = 0 + 2.0 * i / 250;
+      const gv = gPulse(tau), uv = uWave(t - tau);
+      if (gv !== 0 && uv !== 0) {
+        const prod = gv * uv;
+        const barTop = oy(Math.max(0, prod));
+        const barBot = oy(Math.min(0, prod));
+        overlapSVG.appendChild(el("rect", {
+          x: ox(tau), y: barTop, width: Math.max(1, ox(2.0 / 250) - ox(0)), height: Math.max(0.5, barBot - barTop),
+          fill: prod >= 0 ? "var(--y-color)" : "var(--unstable)", opacity: 0.28
+        }));
+      }
+    }
+    overlapSVG.appendChild(el("text", { x: OPAD.l, y: 14, class: "chart-title" })).textContent = "t = " + t.toFixed(2);
+  }
+
+  const YW = 480, YH = 130, YPAD = { l: 34, r: 14, t: 14, b: 22 };
+  function yx(tt) { return YPAD.l + (tt - 0) / 4 * (YW - YPAD.l - YPAD.r); }
+  function yy(v) { return (YH - YPAD.b) - (v + 0.8) / 1.6 * (YH - YPAD.t - YPAD.b); }
+
+  function drawOutput(t) {
+    clear(outputSVG);
+    outputSVG.setAttribute("viewBox", "0 0 " + YW + " " + YH);
+    outputSVG.appendChild(el("line", { x1: yx(0), y1: yy(0), x2: yx(4), y2: yy(0), class: "axis-line" }));
+    [0, 1, 2, 3, 4].forEach(tm => {
+      outputSVG.appendChild(el("line", { x1: yx(tm), y1: YPAD.t, x2: yx(tm), y2: YH - YPAD.b, class: "grid-line" }));
+      outputSVG.appendChild(el("text", { x: yx(tm), y: YH - 6, class: "chart-label", "text-anchor": "middle" })).textContent = tm;
+    });
+    const full = [];
+    for (let i = 0; i <= 200; i++) { const tt = 4 * i / 200; full.push([yx(tt), yy(yAnalytic(tt))]); }
+    outputSVG.appendChild(polyline(full, "var(--grid-line)", 1.5));
+
+    const tClamped = Math.max(0, Math.min(4, t));
+    const traced = [];
+    for (let i = 0; i <= 200; i++) { const tt = tClamped * i / 200; traced.push([yx(tt), yy(yAnalytic(tt))]); }
+    outputSVG.appendChild(polyline(traced, "var(--y-color)", 2.6));
+    const cy = yAnalytic(tClamped);
+    outputSVG.appendChild(el("circle", { cx: yx(tClamped), cy: yy(cy), r: 4, fill: "var(--y-color)" }));
+    outputSVG.appendChild(el("text", { x: OPAD.l, y: 14, class: "chart-title" })).textContent = "y(t) = (g*u)(t)";
+  }
+
+  function updateConv() {
+    const t = parseFloat(tSlider.value);
+    tVal.textContent = t.toFixed(2);
+    drawOverlap(t);
+    drawOutput(t);
+    const yv = yAnalytic(Math.max(0, Math.min(4, t)));
+    convReadout.textContent = "y(" + t.toFixed(2) + ") = " + yv.toFixed(3);
+  }
+  tSlider.addEventListener("input", updateConv);
+
+  // ================= PANEL 2: STATE SPACE =================
+  const a1Slider = document.getElementById("a1Slider");
+  const a0Slider = document.getElementById("a0Slider");
+  const a1Val = document.getElementById("a1Val");
+  const a0Val = document.getElementById("a0Val");
+  const stabilityBadge = document.getElementById("stabilityBadge");
+  const stabilityText = document.getElementById("stabilityText");
+  const poleReadout = document.getElementById("poleReadout");
+  const hsReadout = document.getElementById("hsReadout");
+  const aReadout = document.getElementById("aReadout");
+  const bReadout = document.getElementById("bReadout");
+  const cdReadout = document.getElementById("cdReadout");
+  const poleZeroSVG = makeSVG("poleZero");
+  const impulseSVG = makeSVG("impulsePlot");
+
+  function poles(a1, a0) {
+    const disc = a1 * a1 - 4 * a0;
+    if (disc >= 0) {
+      const sq = Math.sqrt(disc);
+      return [{ re: (-a1 + sq) / 2, im: 0 }, { re: (-a1 - sq) / 2, im: 0 }];
+    }
+    const sq = Math.sqrt(-disc);
+    return [{ re: -a1 / 2, im: sq / 2 }, { re: -a1 / 2, im: -sq / 2 }];
+  }
+
+  function impulseResponse(a1, a0, tArr) {
+    const p = poles(a1, a0);
+    if (Math.abs(p[0].im) > 1e-9) {
+      const sigma = p[0].re, omega = Math.abs(p[0].im);
+      return tArr.map(t => Math.exp(sigma * t) * Math.sin(omega * t) / omega);
+    }
+    const p1 = p[0].re, p2 = p[1].re;
+    if (Math.abs(p1 - p2) > 1e-9) {
+      return tArr.map(t => (Math.exp(p1 * t) - Math.exp(p2 * t)) / (p1 - p2));
+    }
+    return tArr.map(t => t * Math.exp(p1 * t));
+  }
+
+  const PZW = 220, PZH = 190;
+  function pzx(re) { return PZW / 2 + re * 16; }
+  function pzy(im) { return PZH / 2 - im * 16; }
+
+  function drawPoleZero(a1, a0) {
+    clear(poleZeroSVG);
+    poleZeroSVG.setAttribute("viewBox", "0 0 " + PZW + " " + PZH);
+    poleZeroSVG.appendChild(el("line", { x1: 8, y1: PZH / 2, x2: PZW - 8, y2: PZH / 2, class: "axis-line" }));
+    poleZeroSVG.appendChild(el("line", { x1: PZW / 2, y1: 8, x2: PZW / 2, y2: PZH - 8, class: "axis-line" }));
+    poleZeroSVG.appendChild(el("text", { x: PZW - 10, y: PZH / 2 - 6, class: "chart-label", "text-anchor": "end" })).textContent = "Re";
+    poleZeroSVG.appendChild(el("text", { x: PZW / 2 + 6, y: 16, class: "chart-label" })).textContent = "Im";
+    poleZeroSVG.appendChild(el("line", { x1: PZW / 2, y1: 8, x2: PZW / 2, y2: PZH - 8, stroke: "var(--stable)", "stroke-width": 1, "stroke-dasharray": "3,3", opacity: 0.5 }));
+
+    const p = poles(a1, a0);
+    p.forEach(pp => {
+      const stable = pp.re < 0;
+      poleZeroSVG.appendChild(el("line", { x1: pzx(pp.re) - 5, y1: pzy(pp.im) - 5, x2: pzx(pp.re) + 5, y2: pzy(pp.im) + 5, stroke: stable ? "var(--stable)" : "var(--unstable)", "stroke-width": 2.4 }));
+      poleZeroSVG.appendChild(el("line", { x1: pzx(pp.re) - 5, y1: pzy(pp.im) + 5, x2: pzx(pp.re) + 5, y2: pzy(pp.im) - 5, stroke: stable ? "var(--stable)" : "var(--unstable)", "stroke-width": 2.4 }));
+    });
+    poleZeroSVG.appendChild(el("text", { x: 8, y: 16, class: "chart-title" })).textContent = "pole-zero map";
+  }
+
+  const IW = 260, IH = 190, IPAD = { l: 30, r: 10, t: 14, b: 22 };
+  function drawImpulse(a1, a0) {
+    clear(impulseSVG);
+    impulseSVG.setAttribute("viewBox", "0 0 " + IW + " " + IH);
+    const tArr = [];
+    for (let i = 0; i <= 200; i++) tArr.push(5 * i / 200);
+    const h = impulseResponse(a1, a0, tArr);
+    const hMax = Math.max(0.2, ...h.map(Math.abs));
+    function ix(t) { return IPAD.l + t / 5 * (IW - IPAD.l - IPAD.r); }
+    function iy(v) { return IH / 2 - (v / hMax) * (IH / 2 - IPAD.t - 6); }
+    impulseSVG.appendChild(el("line", { x1: ix(0), y1: IH / 2, x2: ix(5), y2: IH / 2, class: "axis-line" }));
+    const pts = tArr.map((t, i) => [ix(t), iy(h[i])]);
+    const stable = poles(a1, a0).every(p => p.re < 0);
+    impulseSVG.appendChild(polyline(pts, stable ? "var(--stable)" : "var(--unstable)", 2.2));
+    impulseSVG.appendChild(el("text", { x: IPAD.l, y: 14, class: "chart-title" })).textContent = "h(t)";
+  }
+
+  function fmtComplex(z) {
+    if (Math.abs(z.im) < 1e-9) return z.re.toFixed(2);
+    return z.re.toFixed(2) + (z.im >= 0 ? " + " : " - ") + Math.abs(z.im).toFixed(2) + "j";
+  }
+
+  function updateSS() {
+    const a1 = parseFloat(a1Slider.value);
+    const a0 = parseFloat(a0Slider.value);
+    a1Val.textContent = a1.toFixed(2);
+    a0Val.textContent = a0.toFixed(2);
+
+    const p = poles(a1, a0);
+    const stable = p.every(pp => pp.re < 0);
+    stabilityBadge.className = "badge " + (stable ? "stable" : "unstable");
+    stabilityText.textContent = stable ? "stable" : "unstable";
+    poleReadout.textContent = "poles: " + fmtComplex(p[0]) + ",  " + fmtComplex(p[1]);
+
+    const a0sign = a0 >= 0 ? " + " + a0.toFixed(2) : " - " + Math.abs(a0).toFixed(2);
+    const a1sign = a1 >= 0 ? "+" + a1.toFixed(2) : a1.toFixed(2);
+    hsReadout.textContent = "1 / (s² " + a1sign + "s" + a0sign + ")";
+    aReadout.textContent = "[  0      1 ]\n[ " + (-a0).toFixed(2) + "  " + (-a1).toFixed(2) + " ]";
+    bReadout.textContent = "[ 0 ]\n[ 1 ]";
+    cdReadout.textContent = "C = [ 1  0 ]\nD = 0";
+
+    drawPoleZero(a1, a0);
+    drawImpulse(a1, a0);
+  }
+  a1Slider.addEventListener("input", updateSS);
+  a0Slider.addEventListener("input", updateSS);
+
+  updateConv();
+  updateSS();
+})();
+</script>
+</body>
+</html>

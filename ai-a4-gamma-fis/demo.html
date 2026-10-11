@@ -1,0 +1,369 @@
+<title>Gamma-Ray Threat Confidence</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: inputs and their membership curves on the left, the live decision on the right, scenario comparison across the bottom. */
+:root{
+  --bg:#f1f3f0; --surface:#fafbf9; --surface2:#e8ece8;
+  --ink:#14201e; --ink2:#44524f; --muted:#6d7b77;
+  --line:rgba(20,32,30,.13); --line2:rgba(20,32,30,.26);
+  --brand:#1f4e5f; --brand-ink:#ffffff; --brand-tint:#dbe8ec;
+  --low:#2f7f8f; --med:#a9741a; --high:#c2461f;
+  --signal:#c2461f; --signal-tint:rgba(194,70,31,.16);
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+    --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+    --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+    --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+    --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+    --signal:#ef7a52; --signal-tint:rgba(239,122,82,.22);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+  --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+  --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+  --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+  --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+  --signal:#ef7a52; --signal-tint:rgba(239,122,82,.22);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;padding-inline:16px;padding-block:32px 64px}
+.wrap{max-width:1120px;margin:0 auto}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--brand);font-weight:600}
+h1{font-family:var(--display);font-size:clamp(28px,5vw,44px);line-height:1.08;margin:8px 0 10px;letter-spacing:-.015em;text-wrap:balance}
+header p{margin:0;max-width:66ch;color:var(--ink2);font-size:15.5px}
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;margin-top:26px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.panel h2{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:0 0 12px;font-weight:600}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.presets button{font:inherit;font-size:13px;padding:6px 11px;border-radius:8px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer}
+.presets button:hover{background:var(--surface2)}
+.presets button[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+.presets .state{font-size:12px;color:var(--muted);align-self:center;margin-left:4px}
+button:focus-visible,input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.feature{padding-top:14px;margin-top:14px;border-top:1px solid var(--line)}
+.f-head{display:flex;align-items:baseline;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.f-head .name{font-family:var(--mono);font-weight:600;font-size:14px}
+.f-head .note{font-size:12px;color:var(--muted);flex:1;min-width:0}
+.f-head input[type=number]{width:92px;font-family:var(--mono);font-size:13px;padding:4px 6px;border:1px solid var(--line2);border-radius:6px;background:var(--surface);color:var(--ink);text-align:right}
+input[type=range]{width:100%;accent-color:var(--brand);margin:8px 0 2px}
+.mfchart{width:100%;height:auto;display:block}
+.deg{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:var(--mono);font-size:12px;color:var(--ink2);margin-top:2px}
+.deg i{display:inline-block;width:10px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.result{display:flex;flex-direction:column;gap:20px;min-width:0}
+.score-row{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.score{font-family:var(--display);font-weight:700;font-size:clamp(56px,10vw,88px);line-height:.9;letter-spacing:-.03em}
+.score small{font-size:.38em;font-weight:600;color:var(--ink2);margin-left:4px}
+.band{font-family:var(--mono);font-size:13px;font-weight:600;padding:4px 10px;border-radius:6px;background:var(--signal-tint);color:var(--signal);margin-bottom:6px}
+.score-note{color:var(--ink2);font-size:14px;max-width:56ch;margin:10px 0 0}
+.outchart{width:100%;height:auto;display:block;margin-top:8px}
+.rules-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.rules-head h2{margin:0}
+.rules-head label{font-size:13px;color:var(--ink2);display:flex;gap:6px;align-items:center;cursor:pointer}
+.rule{display:grid;grid-template-columns:28px minmax(0,1fr) 120px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.rule .n{font-family:var(--mono);color:var(--muted);font-size:12px}
+.rule .txt{min-width:0}
+.rule .txt b{font-weight:600}
+.rule .then{color:var(--ink2)}
+.rule .bar{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px}
+.rule .track{flex:1;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.rule .fill{display:block;height:100%;background:var(--signal);border-radius:3px}
+.rule.off{opacity:.45}
+@media (max-width:520px){.rule{grid-template-columns:24px minmax(0,1fr)}.rule .bar{grid-column:2}}
+.cmp{display:flex;flex-direction:column;gap:6px}
+.cmp button{display:grid;grid-template-columns:96px minmax(0,1fr) 54px;gap:12px;align-items:center;font:inherit;text-align:left;padding:7px 10px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--ink);cursor:pointer}
+.cmp button:hover{background:var(--surface2)}
+.cmp button[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-tint)}
+.cmp .track{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.cmp .fill{display:block;height:100%;background:var(--signal);border-radius:5px}
+.cmp .val{font-family:var(--mono);font-size:13px;text-align:right}
+.cmp .nm{font-size:13.5px}
+footer{margin-top:28px;font-size:12.5px;color:var(--muted);max-width:80ch}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:9px}
+.ax{stroke:var(--line2);stroke-width:1;fill:none}
+.gl{stroke:var(--line);stroke-width:1}
+.c-low{stroke:var(--low)} .c-med{stroke:var(--med)} .c-high{stroke:var(--high)}
+.curve{fill:none;stroke-width:2}
+.cursor{stroke:var(--ink);stroke-width:1.2;stroke-dasharray:3 3}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">EE 5663 &middot; Assignment 4 &middot; Fuzzy Logic Systems</div>
+    <h1>Gamma-Ray Threat Confidence</h1>
+    <p>A Mamdani fuzzy inference system turns four features of a 1024-bin gamma spectrum into a graded confidence score from 0 to 100, instead of a yes or no. Load a scenario or drag a feature and watch which rules fire.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel" aria-label="Spectrum features">
+      <h2>Spectrum features</h2>
+      <div class="presets" id="presets"></div>
+      <div id="features"></div>
+    </section>
+
+    <div class="result">
+      <section class="panel" aria-live="polite">
+        <h2>Threat confidence</h2>
+        <div class="score-row">
+          <div class="score mono" id="score">0<small>%</small></div>
+          <div class="band" id="band"></div>
+        </div>
+        <p class="score-note" id="scoreNote"></p>
+        <svg class="outchart" id="outChart" viewBox="0 0 560 190" role="img" aria-label="Aggregated output fuzzy set and its centroid"></svg>
+      </section>
+
+      <section class="panel">
+        <div class="rules-head">
+          <h2>Rule base (16 rules)</h2>
+          <label for="firedOnly"><input type="checkbox" id="firedOnly"> Show only rules that fire</label>
+        </div>
+        <div id="rules"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel" style="margin-top:20px">
+    <h2>All five scenarios, same system</h2>
+    <div class="cmp" id="cmp"></div>
+  </section>
+
+  <footer>
+    Built from EE 5663 Assignment 4, Problem 4. The engine uses min for AND, min implication, max aggregation and centroid defuzzification over 1001 points, the same defaults as MATLAB's evalfis. Its outputs match my Python reference implementation for all five scenarios.
+  </footer>
+</div>
+
+<script>
+// ---- Mamdani FIS engine (min AND, min implication, max aggregation, centroid) ----
+function tri(x, a, b, c){
+  if (x === b) return 1;
+  if (x <= a || x >= c) return 0;
+  return x < b ? (x - a) / (b - a) : (c - x) / (c - b);
+}
+function trap(x, a, b, c, d){
+  if (x >= b && x <= c) return 1;
+  if (x <= a || x >= d) return 0;
+  return x < b ? (x - a) / (b - a) : (d - x) / (d - c);
+}
+function mf(def, x){
+  return def[0] === "tri" ? tri(x, def[1], def[2], def[3]) : trap(x, def[1], def[2], def[3], def[4]);
+}
+const INPUTS = {
+  NTOTAL: { range:[0,1024], note:"sum of normalized counts", terms:{
+    Low:["trap",0,0,200,400], Medium:["tri",200,400,600], High:["trap",400,600,1024,1024] } },
+  MAX8:   { range:[0,1], note:"peak of the last 800 bins", terms:{
+    Low:["trap",0,0,0.3,0.6], Medium:["tri",0.3,0.6,0.9], High:["trap",0.6,0.9,1,1] } },
+  BIN05:  { range:[0,1024], note:"bins below 0.5", terms:{
+    Low:["trap",0,0,200,450], Medium:["tri",200,450,700], High:["trap",450,700,1024,1024] } },
+  BIN08:  { range:[0,1024], note:"bins above 0.8", terms:{
+    Low:["trap",0,0,90,180], Medium:["tri",90,180,270], High:["trap",180,270,1024,1024] } },
+};
+const OUTPUT = { range:[0,100], terms:{
+  VeryLow:["tri",0,0,25], Low:["tri",0,25,50], Medium:["tri",25,50,75],
+  High:["tri",50,75,100], VeryHigh:["tri",75,100,100] } };
+const RULES = [
+  [[["MAX8","High"],["BIN08","High"]],"VeryHigh"],
+  [[["MAX8","High"],["NTOTAL","High"]],"VeryHigh"],
+  [[["MAX8","High"],["BIN05","Low"]],"High"],
+  [[["MAX8","High"],["BIN08","Medium"]],"High"],
+  [[["MAX8","High"]],"High"],
+  [[["MAX8","Medium"],["BIN08","High"]],"High"],
+  [[["MAX8","Medium"],["NTOTAL","High"]],"High"],
+  [[["MAX8","Medium"],["BIN05","Low"]],"High"],
+  [[["MAX8","Medium"],["BIN08","Medium"]],"Medium"],
+  [[["MAX8","Medium"],["BIN05","High"]],"Medium"],
+  [[["MAX8","Medium"]],"Medium"],
+  [[["MAX8","Low"],["BIN08","Medium"]],"Medium"],
+  [[["MAX8","Low"],["NTOTAL","High"],["BIN05","Low"]],"Medium"],
+  [[["MAX8","Low"],["BIN08","Low"],["BIN05","High"]],"VeryLow"],
+  [[["MAX8","Low"],["NTOTAL","Low"],["BIN08","Low"]],"Low"],
+  [[["MAX8","Low"]],"Low"],
+];
+function evaluate(v, n){
+  n = n || 1001;
+  const memberships = {};
+  for (const k in INPUTS){
+    memberships[k] = {};
+    for (const t in INPUTS[k].terms) memberships[k][t] = mf(INPUTS[k].terms[t], v[k]);
+  }
+  const strengths = RULES.map(r => Math.min(...r[0].map(([k,t]) => memberships[k][t])));
+  const ys = [], agg = [];
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++){
+    const y = OUTPUT.range[0] + (OUTPUT.range[1] - OUTPUT.range[0]) * i / (n - 1);
+    let m = 0;
+    RULES.forEach((r, j) => {
+      if (strengths[j] > 0) m = Math.max(m, Math.min(mf(OUTPUT.terms[r[1]], y), strengths[j]));
+    });
+    ys.push(y); agg.push(m); num += y * m; den += m;
+  }
+  const crisp = den === 0 ? 50 : num / den;
+  return { memberships, strengths, ys, agg, crisp };
+}
+const SCENARIOS = [
+  { name:"Scenario 1", v:{ NTOTAL:81.31843575418995, MAX8:0.6480446927374302, BIN05:965, BIN08:15 } },
+  { name:"Scenario 2", v:{ NTOTAL:56.784140969163, MAX8:0.4581497797356828, BIN05:998, BIN08:4 } },
+  { name:"Scenario 3", v:{ NTOTAL:36.12578616352202, MAX8:0.10062893081761007, BIN05:1005, BIN08:4 } },
+  { name:"Scenario 4", v:{ NTOTAL:43.357142857142854, MAX8:0.023809523809523808, BIN05:990, BIN08:8 } },
+  { name:"Scenario 5", v:{ NTOTAL:74.5031847133758, MAX8:0.5923566878980892, BIN05:965, BIN08:15 } },
+];
+
+
+const TERMS = ["Low","Medium","High"];
+const TERM_CLASS = { Low:"c-low", Medium:"c-med", High:"c-high" };
+const TERM_VAR = { Low:"var(--low)", Medium:"var(--med)", High:"var(--high)" };
+const STEP = { NTOTAL:1, MAX8:0.001, BIN05:1, BIN08:1 };
+let state = { v: Object.assign({}, SCENARIOS[0].v), idx: 0 };
+
+function fmt(k, x){ return k === "MAX8" ? x.toFixed(3) : (Math.abs(x) < 100 && x % 1 ? x.toFixed(1) : String(Math.round(x))); }
+
+function buildStatic(){
+  const pre = document.getElementById("presets");
+  SCENARIOS.forEach((s, i) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "preset" + i; b.textContent = s.name;
+    b.addEventListener("click", () => load(i));
+    pre.appendChild(b);
+  });
+  const st = document.createElement("span");
+  st.className = "state"; st.id = "presetState"; pre.appendChild(st);
+
+  const box = document.getElementById("features");
+  Object.keys(INPUTS).forEach(k => {
+    const d = INPUTS[k];
+    const el = document.createElement("div");
+    el.className = "feature";
+    el.innerHTML = `
+      <div class="f-head">
+        <span class="name">${k}</span><span class="note">${d.note}</span>
+        <input type="number" id="num_${k}" min="${d.range[0]}" max="${d.range[1]}" step="${STEP[k]}" aria-label="${k} value">
+      </div>
+      <input type="range" id="rng_${k}" min="${d.range[0]}" max="${d.range[1]}" step="${STEP[k]}" aria-label="${k} slider">
+      <svg class="mfchart" id="mf_${k}" viewBox="0 0 340 92" role="img" aria-label="${k} membership functions"></svg>
+      <div class="deg" id="deg_${k}"></div>`;
+    box.appendChild(el);
+    const set = x => { x = Math.min(d.range[1], Math.max(d.range[0], parseFloat(x))); if (isNaN(x)) return; state.v[k] = x; state.idx = null; render(); };
+    el.querySelector("#rng_" + k).addEventListener("input", e => set(e.target.value));
+    el.querySelector("#num_" + k).addEventListener("input", e => { if (e.target.value !== "") set(e.target.value); });
+  });
+
+  const rules = document.getElementById("rules");
+  RULES.forEach((r, i) => {
+    const row = document.createElement("div");
+    row.className = "rule"; row.id = "rule" + i;
+    const ant = r[0].map(([k, t]) => `<b>${k}</b> is ${t}`).join(" and ");
+    row.innerHTML = `<span class="n">R${i + 1}</span>
+      <span class="txt">IF ${ant} <span class="then">&rarr; threat is <b>${r[1]}</b></span></span>
+      <span class="bar"><span class="track"><span class="fill" style="width:0"></span></span><span class="val">0.00</span></span>`;
+    rules.appendChild(row);
+  });
+  document.getElementById("firedOnly").addEventListener("change", render);
+
+  const cmp = document.getElementById("cmp");
+  SCENARIOS.forEach((s, i) => {
+    const r = evaluate(s.v);
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "cmp" + i;
+    b.innerHTML = `<span class="nm">${s.name}</span><span class="track"><span class="fill" style="width:${r.crisp.toFixed(1)}%"></span></span><span class="val">${r.crisp.toFixed(1)}%</span>`;
+    b.addEventListener("click", () => load(i));
+    cmp.appendChild(b);
+  });
+}
+
+function load(i){ state.v = Object.assign({}, SCENARIOS[i].v); state.idx = i; render(); }
+
+function mfChart(k, res){
+  const d = INPUTS[k], W = 340, H = 92, L = 22, R = 8, T = 6, B = 20;
+  const pw = W - L - R, ph = H - T - B, lo = d.range[0], hi = d.range[1];
+  const X = x => L + (x - lo) / (hi - lo) * pw, Y = m => T + (1 - m) * ph;
+  let s = `<line class="gl" x1="${L}" x2="${W - R}" y1="${Y(0)}" y2="${Y(0)}"/><line class="gl" x1="${L}" x2="${W - R}" y1="${Y(1)}" y2="${Y(1)}"/>`;
+  TERMS.forEach(t => {
+    let pts = [];
+    for (let i = 0; i <= 160; i++){ const x = lo + (hi - lo) * i / 160; pts.push(X(x).toFixed(1) + "," + Y(mf(d.terms[t], x)).toFixed(1)); }
+    s += `<polyline class="curve ${TERM_CLASS[t]}" points="${pts.join(" ")}"/>`;
+  });
+  const cx = X(state.v[k]);
+  s += `<line class="cursor" x1="${cx}" x2="${cx}" y1="${T}" y2="${Y(0)}"/>`;
+  TERMS.forEach(t => {
+    const m = res.memberships[k][t];
+    if (m > 0) s += `<circle cx="${cx}" cy="${Y(m)}" r="3.6" fill="${TERM_VAR[t]}" stroke="var(--surface)" stroke-width="1.5"/>`;
+  });
+  s += `<text x="${L - 4}" y="${Y(1) + 3}" text-anchor="end">1</text><text x="${L - 4}" y="${Y(0) + 3}" text-anchor="end">0</text>`;
+  [0, .5, 1].forEach(f => {
+    const x = lo + (hi - lo) * f, anchor = f === 0 ? "start" : f === 1 ? "end" : "middle";
+    s += `<text x="${X(x)}" y="${H - 5}" text-anchor="${anchor}">${k === "MAX8" ? x.toFixed(1) : Math.round(x)}</text>`;
+  });
+  return s;
+}
+
+function outChart(res){
+  const W = 560, H = 190, L = 28, R = 12, T = 22, B = 26, pw = W - L - R, ph = H - T - B;
+  const X = x => L + x / 100 * pw, Y = m => T + (1 - m) * ph;
+  let s = "";
+  [0, .5, 1].forEach(m => s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${Y(m)}" y2="${Y(m)}"/><text x="${L - 5}" y="${Y(m) + 3}" text-anchor="end">${m}</text>`);
+  Object.keys(OUTPUT.terms).forEach(t => {
+    const def = OUTPUT.terms[t];
+    const pts = [[def[1], 0], [def[2], 1], [def[3], 0]].map(([x, m]) => X(x) + "," + Y(m)).join(" ");
+    s += `<polyline points="${pts}" fill="none" stroke="var(--line2)" stroke-width="1" stroke-dasharray="3 3"/>`;
+    s += `<text x="${X(def[2])}" y="${T - 8}" text-anchor="${def[2] === 0 ? "start" : def[2] === 100 ? "end" : "middle"}">${t}</text>`;
+  });
+  let path = `M ${X(0)} ${Y(0)}`;
+  const step = 5;
+  for (let i = 0; i < res.ys.length; i += step) path += ` L ${X(res.ys[i]).toFixed(1)} ${Y(res.agg[i]).toFixed(1)}`;
+  path += ` L ${X(100)} ${Y(res.agg[res.agg.length - 1])} L ${X(100)} ${Y(0)} Z`;
+  s += `<path d="${path}" fill="var(--signal-tint)" stroke="var(--signal)" stroke-width="1.6"/>`;
+  const cx = X(res.crisp);
+  s += `<line x1="${cx}" x2="${cx}" y1="${T}" y2="${Y(0)}" stroke="var(--ink)" stroke-width="1.6"/>`;
+  s += `<text x="${cx + (res.crisp > 80 ? -5 : 5)}" y="${T + 12}" text-anchor="${res.crisp > 80 ? "end" : "start"}" style="fill:var(--ink);font-size:10px;font-weight:600">centroid ${res.crisp.toFixed(1)}</text>`;
+  [0, 25, 50, 75, 100].forEach(x => s += `<text x="${X(x)}" y="${H - 8}" text-anchor="${x === 0 ? "start" : x === 100 ? "end" : "middle"}">${x}%</text>`);
+  return s;
+}
+
+function bandOf(c){
+  let best = "", bm = -1;
+  Object.keys(OUTPUT.terms).forEach(t => { const m = mf(OUTPUT.terms[t], c); if (m > bm){ bm = m; best = t; } });
+  return best.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+function render(){
+  const res = evaluate(state.v);
+  Object.keys(INPUTS).forEach(k => {
+    document.getElementById("rng_" + k).value = state.v[k];
+    const num = document.getElementById("num_" + k);
+    if (document.activeElement !== num) num.value = fmt(k, state.v[k]);
+    document.getElementById("mf_" + k).innerHTML = mfChart(k, res);
+    document.getElementById("deg_" + k).innerHTML = TERMS.map(t =>
+      `<span><i style="background:${TERM_VAR[t]}"></i>${t} ${res.memberships[k][t].toFixed(2)}</span>`).join("");
+  });
+  SCENARIOS.forEach((s, i) => {
+    document.getElementById("preset" + i).setAttribute("aria-pressed", state.idx === i);
+    document.getElementById("cmp" + i).setAttribute("aria-pressed", state.idx === i);
+  });
+  document.getElementById("presetState").textContent = state.idx === null ? "custom values" : "";
+  document.getElementById("score").innerHTML = res.crisp.toFixed(1) + "<small>%</small>";
+  const band = bandOf(res.crisp);
+  document.getElementById("band").textContent = band;
+  const fired = res.strengths.filter(s => s > 0).length;
+  document.getElementById("scoreNote").textContent =
+    `${fired} of 16 rules fire. The output shape below is the union of their clipped consequents, and the score is its centroid.`;
+  document.getElementById("outChart").innerHTML = outChart(res);
+  const only = document.getElementById("firedOnly").checked;
+  res.strengths.forEach((s, i) => {
+    const row = document.getElementById("rule" + i);
+    row.hidden = only && s === 0;
+    row.classList.toggle("off", s === 0);
+    row.querySelector(".fill").style.width = (s * 100).toFixed(0) + "%";
+    row.querySelector(".val").textContent = s.toFixed(2);
+  });
+}
+buildStatic();
+render();
+</script>
