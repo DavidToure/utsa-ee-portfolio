@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Robot Navigation Rules</title>
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: the grid world and its controls on the left, the current cycle's reasoning and the full cycle table on the right. */
+:root{
+  --bg:#f1f3f0; --surface:#fafbf9; --surface2:#e8ece8;
+  --ink:#14201e; --ink2:#44524f; --muted:#6d7b77;
+  --line:rgba(20,32,30,.13); --line2:rgba(20,32,30,.26);
+  --brand:#1f4e5f; --brand-ink:#ffffff; --brand-tint:#dbe8ec;
+  --low:#2f7f8f; --med:#a9741a; --high:#c2461f;
+  --signal:#c2461f; --signal-tint:rgba(194,70,31,.16);
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+    --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+    --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+    --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+    --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+    --signal:#ef7a52; --signal-tint:rgba(239,122,82,.22);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+  --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+  --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+  --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+  --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+  --signal:#ef7a52; --signal-tint:rgba(239,122,82,.22);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;padding-inline:16px;padding-block:32px 64px}
+.wrap{max-width:1120px;margin:0 auto}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--brand);font-weight:600}
+h1{font-family:var(--display);font-size:clamp(28px,5vw,44px);line-height:1.08;margin:8px 0 10px;letter-spacing:-.015em;text-wrap:balance}
+header p{margin:0;max-width:66ch;color:var(--ink2);font-size:15.5px}
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;margin-top:26px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.panel h2{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:0 0 12px;font-weight:600}
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+button{font:inherit}
+.btn{font-size:13px;padding:7px 13px;border-radius:8px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+.btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.field input,.field select{font-family:var(--mono);font-size:13px;padding:5px 7px;border:1px solid var(--line2);border-radius:6px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.mono,th.num{font-family:var(--mono)}
+th.num,td.num{text-align:right}
+footer{margin-top:28px;font-size:12.5px;color:var(--muted);max-width:80ch}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:9px}
+.gl{stroke:var(--line);stroke-width:1}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:6px;background:var(--surface2);color:var(--ink2)}
+.pill.hot{background:var(--signal-tint);color:var(--signal);font-weight:600}
+
+.cyc-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.cyc-top .big{font-family:var(--display);font-weight:700;font-size:34px;letter-spacing:-.02em}
+.kv{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px 12px;margin:12px 0 0;font-size:13px}
+.kv dt{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding-top:2px}
+.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips span{font-family:var(--mono);font-size:11.5px;padding:2px 7px;border-radius:5px;background:var(--surface2);color:var(--ink2)}
+.chips span.live{background:var(--brand-tint);color:var(--brand);font-weight:600}
+tr.cur td{background:var(--brand-tint)}
+tr.clk{cursor:pointer}
+tr.clk:hover td{background:var(--surface2)}
+tr.cur:hover td{background:var(--brand-tint)}
+.note{font-size:13px;color:var(--ink2);margin:10px 0 0}
+.maxh{max-height:420px;overflow:auto}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">EE 5663 &middot; Assignment 3 &middot; Production systems</div>
+    <h1>Robot Navigation Rules</h1>
+    <p>A robot has to reach an object on a grid without hitting obstacles. Each cycle, the facts in working memory trigger rules, and when several rules match, conflict resolution decides which one fires. Step through the cycles, or change the scenario and watch a different path form.</p>
+  </header>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="panel">
+        <h2>Grid world</h2>
+        <svg id="world" viewBox="0 0 400 300" role="img" aria-label="Grid with the robot, obstacles and goal" style="width:100%;height:auto;display:block"></svg>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="prev" type="button">&larr; Prev</button>
+          <button class="btn primary" id="play" type="button">Play</button>
+          <button class="btn" id="next" type="button">Next &rarr;</button>
+          <span class="pill" id="cycLabel"></span>
+        </div>
+        <input type="range" id="slider" min="1" max="22" value="1" aria-label="Cycle" style="margin-top:10px">
+      </section>
+      <section class="panel">
+        <h2>Scenario</h2>
+        <div class="fields">
+          <label class="field" for="sx">Start x<input id="sx" type="number" min="0" max="30" step="1"></label>
+          <label class="field" for="sy">Start y<input id="sy" type="number" min="0" max="30" step="1"></label>
+          <label class="field" for="sd">Facing<select id="sd"><option value="n">north</option><option value="e">east</option><option value="s">south</option><option value="w">west</option></select></label>
+          <label class="field" for="gx">Object x<input id="gx" type="number" min="0" max="30" step="1"></label>
+          <label class="field" for="gy">Object y<input id="gy" type="number" min="0" max="30" step="1"></label>
+        </div>
+        <label class="field" for="obs" style="margin-top:10px">Obstacles, as x,y pairs separated by semicolons<input id="obs" type="text"></label>
+        <div class="row" style="margin-top:10px"><button class="btn" id="reset" type="button">Reset to the homework scenario</button></div>
+        <p class="note" id="status"></p>
+      </section>
+    </div>
+
+    <div class="stack">
+      <section class="panel" aria-live="polite">
+        <div class="cyc-top"><h2 style="margin:0">Current cycle</h2><div class="big mono" id="cycBig"></div></div>
+        <dl class="kv">
+          <dt>Working memory</dt><dd><div class="chips" id="wm"></div></dd>
+          <dt>Conflict set</dt><dd class="mono" id="conf"></dd>
+          <dt>Strategy</dt><dd id="strat"></dd>
+          <dt>Fired rule</dt><dd class="mono" id="fired" style="font-weight:600"></dd>
+        </dl>
+      </section>
+      <section class="panel">
+        <h2>Cycle table</h2>
+        <div class="tbl-wrap maxh"><table><thead><tr><th class="num">Cycle</th><th>Conflict set</th><th>Strategy</th><th>Fired rule</th></tr></thead><tbody id="tbody"></tbody></table></div>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    Built from EE 5663 Assignment 3, a rule-based robot from lecture 4. Rules 4, 5, 2, 3 move the robot north, south, west, east, rules 8, 6, 7, 9 turn it away from an obstacle, and rule 1 detects the object. Conflicts are resolved by specificity, then refractoriness, then a fixed random order of n, w, s, e. The engine is a direct port of my MATLAB function and gives the same 22-cycle trace for the homework scenario. Runs stop after 30 cycles.
+  </footer>
+</div>
+
+<script>
+// Port of roboToure.m (HW3): rule-based robot navigation with conflict resolution.
+function runRobot(cfg){
+  let x = cfg.x, y = cfg.y, dir = cfg.dir;
+  const obstacles = cfg.obstacles, objX = cfg.objX, objY = cfg.objY;
+  const order = ["n","w","s","e"];
+  const tried = new Set();
+  let count = 0;
+  const rows = [];
+  const isObs = (a, b) => obstacles.some(o => o[0] === a && o[1] === b);
+  const maxCycles = cfg.maxCycles || 30;
+  let reached = false;
+  for (let cyc = 1; cyc <= maxCycles; cyc++){
+    const wm = [`robot_at(${x},${y})`, `direction(${dir})`]
+      .concat(order.map(o => `choice(${o})`))
+      .concat(obstacles.slice().sort((p, q) => p[0] - q[0] || p[1] - q[1]).map(o => `obstacle_at(${o[0]},${o[1]})`))
+      .concat([`object_at(${objX},${objY})`]).join(", ");
+    let nx, ny, mRule, mName, aRule, aName;
+    if (dir === "n"){ nx = x; ny = y + 1; mRule = 4; mName = "move_north"; aRule = 8; aName = "avoid_obstacle_north"; }
+    else if (dir === "s"){ nx = x; ny = y - 1; mRule = 5; mName = "move_south"; aRule = 6; aName = "avoid_obstacle_south"; }
+    else if (dir === "w"){ nx = x - 1; ny = y; mRule = 2; mName = "move_west"; aRule = 7; aName = "avoid_obstacle_west"; }
+    else { nx = x + 1; ny = y; mRule = 3; mName = "move_east"; aRule = 9; aName = "avoid_obstacle_east"; }
+    const onGoal = x === objX && y === objY;
+    const blocked = isObs(nx, ny);
+    const conf = [String(mRule)];
+    if (onGoal) conf.push("1");
+    if (blocked) order.forEach(o => conf.push(`${aRule} (ND=${o})`));
+    const row = { cycle: cyc, x, y, dir, wm, conflicts: "{" + conf.join(", ") + "}" };
+    if (onGoal){
+      row.strategy = "Goal priority (rule 1 adopted convention)";
+      row.fired = "1:detect_object"; row.kind = "goal"; rows.push(row); reached = true; break;
+    } else if (blocked){
+      const strat = ["Specificity"];
+      const keys = order.map(o => `${aRule},${x},${y},${nx},${ny},${o}`);
+      const untried = keys.map(k => !tried.has(k));
+      let opts = order.slice(), optKeys = keys.slice();
+      if (untried.some(Boolean)){
+        if (!untried.every(Boolean)) strat.push("Refractoriness");
+        opts = order.filter((_, i) => untried[i]);
+        optKeys = keys.filter((_, i) => untried[i]);
+      }
+      let pick;
+      if (opts.length > 1){ strat.push("Random"); pick = count % opts.length; count++; } else pick = 0;
+      const newDir = opts[pick];
+      tried.add(optKeys[pick]);
+      dir = newDir;
+      row.strategy = strat.join(", ");
+      row.fired = `${aRule}:${aName}(ND=${newDir})`; row.kind = "turn";
+      row.newDir = newDir;
+    } else {
+      row.strategy = "-";
+      row.fired = `${mRule}:${mName}`; row.kind = "move";
+      x = nx; y = ny;
+    }
+    row.after = { x, y, dir };
+    rows.push(row);
+  }
+  return { rows, reached };
+}
+const ROBOT_DEFAULT = { x:9, y:7, dir:"n", obstacles:[[9,8],[9,1]], objX:3, objY:7 };
+
+const DIR_ANGLE = { n:0, e:90, s:180, w:270 };
+let cfg, result, step = 0, timer = null;
+
+function parseObs(t){
+  const out = [], re = /(-?\d+)\s*,\s*(-?\d+)/g; let m;
+  while ((m = re.exec(t))) out.push([parseInt(m[1], 10), parseInt(m[2], 10)]);
+  return out;
+}
+function fmtObs(o){ return o.map(p => p[0] + "," + p[1]).join("; "); }
+function loadControls(){
+  document.getElementById("sx").value = cfg.x; document.getElementById("sy").value = cfg.y;
+  document.getElementById("sd").value = cfg.dir;
+  document.getElementById("gx").value = cfg.objX; document.getElementById("gy").value = cfg.objY;
+  document.getElementById("obs").value = fmtObs(cfg.obstacles);
+}
+function readControls(){
+  const n = id => parseInt(document.getElementById(id).value, 10);
+  const x = n("sx"), y = n("sy"), gx = n("gx"), gy = n("gy");
+  if ([x, y, gx, gy].some(isNaN)) return false;
+  cfg = { x, y, dir: document.getElementById("sd").value, objX: gx, objY: gy, obstacles: parseObs(document.getElementById("obs").value) };
+  return true;
+}
+function recompute(keep){
+  result = runRobot(cfg);
+  step = keep ? Math.min(step, result.rows.length - 1) : 0;
+  const sl = document.getElementById("slider");
+  sl.max = result.rows.length; render();
+}
+
+function world(){
+  const rows = result.rows, pts = [[cfg.x, cfg.y], [cfg.objX, cfg.objY]].concat(cfg.obstacles);
+  rows.forEach(r => pts.push([r.x, r.y]));
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs) - 1, x1 = Math.max(...xs) + 1, y0 = Math.min(...ys) - 1, y1 = Math.max(...ys) + 1;
+  const cols = x1 - x0 + 1, rws = y1 - y0 + 1;
+  const cell = Math.min(34, 360 / cols, 250 / rws), L = 28, T = 8;
+  const W = L + cols * cell + 8, H = T + rws * cell + 24;
+  const X = x => L + (x - x0 + .5) * cell, Y = y => T + (y1 - y + .5) * cell;
+  let s = "";
+  for (let i = 0; i <= cols; i++) s += `<line class="gl" x1="${L + i * cell}" x2="${L + i * cell}" y1="${T}" y2="${T + rws * cell}"/>`;
+  for (let j = 0; j <= rws; j++) s += `<line class="gl" x1="${L}" x2="${L + cols * cell}" y1="${T + j * cell}" y2="${T + j * cell}"/>`;
+  for (let x = x0; x <= x1; x++) s += `<text x="${X(x)}" y="${T + rws * cell + 14}" text-anchor="middle">${x}</text>`;
+  for (let y = y0; y <= y1; y++) s += `<text x="${L - 6}" y="${Y(y) + 3}" text-anchor="end">${y}</text>`;
+  cfg.obstacles.forEach(o => s += `<rect x="${X(o[0]) - cell * .42}" y="${Y(o[1]) - cell * .42}" width="${cell * .84}" height="${cell * .84}" rx="3" fill="var(--med)"><title>obstacle at (${o[0]},${o[1]})</title></rect>`);
+  s += `<circle cx="${X(cfg.objX)}" cy="${Y(cfg.objY)}" r="${cell * .36}" fill="none" stroke="var(--high)" stroke-width="2.5"/><circle cx="${X(cfg.objX)}" cy="${Y(cfg.objY)}" r="${cell * .12}" fill="var(--high)"><title>object at (${cfg.objX},${cfg.objY})</title></circle>`;
+  const trail = rows.slice(0, step + 1).map(r => `${X(r.x)},${Y(r.y)}`).join(" ");
+  s += `<polyline points="${trail}" fill="none" stroke="var(--brand)" stroke-width="2" stroke-opacity=".55" stroke-linejoin="round"/>`;
+  const cur = rows[step], a = DIR_ANGLE[cur.dir], r = cell * .34;
+  s += `<g transform="translate(${X(cur.x)} ${Y(cur.y)}) rotate(${a})"><polygon points="0,${-r} ${r * .8},${r * .8} ${-r * .8},${r * .8}" fill="var(--brand)" stroke="var(--surface)" stroke-width="1.5"/></g>`;
+  const svg = document.getElementById("world");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = s;
+}
+
+function render(){
+  const rows = result.rows, cur = rows[step];
+  world();
+  document.getElementById("slider").value = step + 1;
+  document.getElementById("cycLabel").textContent = `cycle ${cur.cycle} of ${rows.length}`;
+  document.getElementById("cycBig").textContent = cur.cycle;
+  document.getElementById("wm").innerHTML = cur.wm.split(", ").map(f => `<span class="${/^(robot_at|direction)/.test(f) ? "live" : ""}">${f}</span>`).join("");
+  document.getElementById("conf").textContent = cur.conflicts;
+  document.getElementById("strat").textContent = cur.strategy;
+  document.getElementById("fired").textContent = cur.fired;
+  document.getElementById("tbody").innerHTML = rows.map((r, i) =>
+    `<tr class="clk${i === step ? " cur" : ""}" data-i="${i}"><td class="num mono">${r.cycle}</td><td class="mono">${r.conflicts}</td><td>${r.strategy}</td><td class="mono">${r.fired}</td></tr>`).join("");
+  document.getElementById("status").textContent = result.reached
+    ? `The robot reaches the object in ${rows.length} cycles.`
+    : `The robot does not reach the object within 30 cycles in this scenario.`;
+  const sel = document.querySelector("#tbody tr.cur"); if (sel && sel.scrollIntoView) { /* keep table position stable */ }
+}
+function stop(){ if (timer){ clearInterval(timer); timer = null; } document.getElementById("play").textContent = "Play"; }
+function go(i){ step = Math.max(0, Math.min(result.rows.length - 1, i)); render(); }
+
+document.getElementById("prev").addEventListener("click", () => { stop(); go(step - 1); });
+document.getElementById("next").addEventListener("click", () => { stop(); go(step + 1); });
+document.getElementById("slider").addEventListener("input", e => { stop(); go(parseInt(e.target.value, 10) - 1); });
+document.getElementById("play").addEventListener("click", () => {
+  if (timer){ stop(); return; }
+  if (step >= result.rows.length - 1) step = 0;
+  document.getElementById("play").textContent = "Pause";
+  timer = setInterval(() => { if (step >= result.rows.length - 1){ stop(); return; } go(step + 1); }, 650);
+  go(step);
+});
+document.getElementById("tbody").addEventListener("click", e => { const tr = e.target.closest("tr"); if (tr){ stop(); go(parseInt(tr.dataset.i, 10)); } });
+["sx","sy","sd","gx","gy","obs"].forEach(id => document.getElementById(id).addEventListener("input", () => { stop(); if (readControls()) recompute(false); }));
+document.getElementById("reset").addEventListener("click", () => { stop(); cfg = JSON.parse(JSON.stringify(ROBOT_DEFAULT)); loadControls(); recompute(false); });
+
+cfg = JSON.parse(JSON.stringify(ROBOT_DEFAULT)); loadControls(); recompute(false);
+</script>
+</body>
+</html>

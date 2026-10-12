@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>David Toure Portfolio</title>
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one left-aligned column. A name block, two project rows with a drawn motif each, then two short side-by-side notes on film and LEKE. */
+:root{
+  --bg:#f1f3f0; --surface:#fafbf9; --surface2:#e8ece8;
+  --ink:#14201e; --ink2:#44524f; --muted:#6d7b77;
+  --line:rgba(20,32,30,.13); --line2:rgba(20,32,30,.26);
+  --brand:#1f4e5f; --brand-ink:#ffffff; --brand-tint:#dbe8ec;
+  --low:#2f7f8f; --med:#a9741a; --high:#c2461f;
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+    --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+    --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+    --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+    --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+  --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+  --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+  --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+  --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.55;padding-inline:16px;padding-block:40px 64px}
+.wrap{max-width:900px;margin:0 auto}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--brand);font-weight:600}
+h1{font-family:var(--display);font-size:clamp(40px,8vw,72px);line-height:1;margin:10px 0 18px;letter-spacing:-.025em}
+.lede{font-size:clamp(17px,2.4vw,20px);max-width:56ch;margin:0;color:var(--ink2)}
+.lede strong{color:var(--ink);font-weight:600}
+h2{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink2);font-weight:600;margin:0}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line2);padding-bottom:10px;margin:56px 0 0}
+.sec-head span{font-size:13px;color:var(--muted)}
+.project{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr);gap:24px;padding:26px 0;border-bottom:1px solid var(--line)}
+@media (max-width:620px){.project{grid-template-columns:minmax(0,1fr);gap:14px}}
+.motif{width:100%;max-width:150px;height:auto;display:block}
+.course{font-family:var(--mono);font-size:12px;color:var(--muted);margin:0 0 4px}
+h3{font-family:var(--display);font-size:clamp(22px,3.4vw,28px);line-height:1.15;margin:0 0 8px;letter-spacing:-.01em;text-wrap:balance}
+.project p.desc{margin:0 0 12px;max-width:60ch;color:var(--ink2)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;padding:0;list-style:none}
+.tags li{font-family:var(--mono);font-size:11.5px;padding:3px 8px;border-radius:6px;background:var(--surface2);color:var(--ink2)}
+.open{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;padding:9px 16px;border-radius:8px;background:var(--brand);color:var(--brand-ink);text-decoration:none}
+.open:hover{filter:brightness(1.1)}
+a:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px;margin-top:26px}
+@media (max-width:700px){.two{grid-template-columns:minmax(0,1fr);gap:28px}}
+.two h3{font-size:22px}
+.two p{margin:0 0 12px;color:var(--ink2)}
+.link{color:var(--brand);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.fact{font-family:var(--mono);font-size:12.5px;color:var(--ink2);margin:0 0 12px}
+footer{margin-top:56px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+
+.project.nolink .open{display:none}
+.film-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:14px;margin-top:18px;align-items:start}
+.film-grid figure{margin:0}
+.film-grid img{width:100%;height:auto;display:block;border-radius:6px;border:1px solid var(--line)}
+.film-grid figcaption{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:6px}
+.block{margin-top:30px}
+.block h3{font-size:22px}
+.block p{margin:0 0 12px;color:var(--ink2);max-width:62ch}
+
+svg.motif text{fill:var(--muted);font-family:var(--mono);font-size:7px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">UTSA &middot; MS Electrical Engineering</div>
+    <h1>David Toure</h1>
+    <p class="lede">I'm an electrical engineer, teacher, and filmmaker. My work asks one question: <strong>how do you build engineering tools that any audience can experience, learn from, and teach to others?</strong> These are the projects from my first semester of graduate coursework. Where a project has a live demo, it runs in your browser.</p>
+    <p style="margin:14px 0 0"><a class="link" href="https://github.com/DavidToure/utsa-ee-portfolio" target="_blank" rel="noopener">Source code for every project on GitHub</a></p>
+  </header>
+
+  <div class="sec-head"><h2>Artificial Intelligence</h2><span>EE 5663, Fall 2026</span></div>
+
+  <article class="project">
+    <svg class="motif" viewBox="0 0 150 90" role="img" aria-label="Six connected stages from data to creativity">
+      <g fill="none" stroke="var(--line2)" stroke-width="1.2"><path d="M14 45H136"/></g>
+      <g stroke="var(--brand)" stroke-width="1.6">
+        <circle cx="14" cy="45" r="7" fill="var(--surface)"/><circle cx="38" cy="45" r="7" fill="var(--surface)"/>
+        <circle cx="62" cy="45" r="7" fill="var(--surface)"/><circle cx="86" cy="45" r="7" fill="var(--high)" stroke="var(--high)"/>
+        <circle cx="110" cy="45" r="7" fill="var(--surface)"/><circle cx="134" cy="45" r="7" fill="var(--brand)"/>
+      </g>
+      <text x="14" y="68" text-anchor="middle">D</text><text x="38" y="68" text-anchor="middle">I</text><text x="62" y="68" text-anchor="middle">K</text>
+      <text x="86" y="68" text-anchor="middle">W</text><text x="110" y="68" text-anchor="middle">I</text><text x="134" y="68" text-anchor="middle">C</text>
+    </svg>
+    <div>
+      <p class="course">Assignment 1</p>
+      <h3>DIKW Toy Recommender</h3>
+      <p class="desc">A toy recommendation system built on the Data, Information, Knowledge, Wisdom, Intelligence, and Creativity layers from Wan and Alagar (2014). Every recommendation carries its full reasoning trace, and safety rules can veto a toy before it is ranked.</p>
+      <ul class="tags"><li>Rule-based AI</li><li>Explainable output</li><li>Safety constraints</li></ul>
+      <a class="open" href="ai-a1-dikw-toy-recommender/demo.html" target="_blank" rel="noopener">Open the live demo &rarr;</a>
+    </div>
+  </article>
+
+  <article class="project">
+    <svg class="motif" viewBox="0 0 150 90" role="img" aria-label="Vending machine states: idle, credit, dispense">
+      <g stroke="var(--brand)" stroke-width="1.6" fill="var(--surface)"><circle cx="24" cy="45" r="14"/><circle cx="75" cy="45" r="14"/><circle cx="126" cy="45" r="14"/></g>
+      <g stroke="var(--line2)" stroke-width="1.4" fill="none"><path d="M40 45H58"/><path d="M92 45H109"/><path d="M126 31C126 8 24 8 24 31" stroke-dasharray="3 3"/></g>
+      <text x="24" y="48" text-anchor="middle">idle</text><text x="75" y="48" text-anchor="middle">credit</text><text x="126" y="48" text-anchor="middle">serve</text>
+    </svg>
+    <div>
+      <p class="course">Assignment 2</p>
+      <h3>Rule-Based Vending Machine</h3>
+      <p class="desc">An IF-THEN rule system for a machine that sells tea, coffee, and hot chocolate. It gates on valid coins, carries credit across several drinks, tracks one shared stock count, and returns change. Implemented and tested in MATLAB, and rebuilt here so you can try it.</p>
+      <ul class="tags"><li>Production rules</li><li>MATLAB</li><li>Edge-case testing</li></ul>
+      <a class="open" href="ai-a2-vending-machine/demo.html" target="_blank" rel="noopener">Open the live demo &rarr;</a>
+    </div>
+  </article>
+
+  <article class="project">
+    <svg class="motif" viewBox="0 0 150 90" role="img" aria-label="A robot path across a grid with two obstacles and a goal">
+      <g stroke="var(--line)" stroke-width="1" fill="none"><path d="M10 10H140M10 30H140M10 50H140M10 70H140M10 10V70M40 10V70M70 10V70M100 10V70M130 10V70M140 10V70"/></g>
+      <rect x="71" y="11" width="28" height="18" fill="var(--med)" opacity=".85"/><rect x="71" y="51" width="28" height="18" fill="var(--med)" opacity=".85"/>
+      <path d="M115 40H85M85 40H55H25" stroke="var(--brand)" stroke-width="2" fill="none"/>
+      <circle cx="115" cy="40" r="4" fill="var(--brand)"/><circle cx="25" cy="40" r="5" fill="var(--high)"/>
+    </svg>
+    <div>
+      <p class="course">Assignment 3</p>
+      <h3>Robot Navigation Production System</h3>
+      <p class="desc">A rule-based system that moves a robot across a grid to a target object while avoiding obstacles. Rules fire from working-memory facts, and conflicts are resolved by specificity, refractoriness, and a fixed tie-break order. The robot reaches the goal in 22 cycles.</p>
+      <ul class="tags"><li>Production systems</li><li>Conflict resolution</li><li>MATLAB</li></ul>
+      <a class="open" href="ai-a3-robot-production-system/demo.html" target="_blank" rel="noopener">Open the live demo &rarr;</a>
+    </div>
+  </article>
+
+  <article class="project">
+    <svg class="motif" viewBox="0 0 150 90" role="img" aria-label="Overlapping low, medium and high membership curves">
+      <path d="M10 76H140" stroke="var(--line2)" stroke-width="1.2" fill="none"/>
+      <path d="M10 22H46L80 76" stroke="var(--low)" stroke-width="2" fill="none"/>
+      <path d="M46 76L80 22L114 76" stroke="var(--med)" stroke-width="2" fill="none"/>
+      <path d="M80 76L114 22H140" stroke="var(--high)" stroke-width="2" fill="none"/>
+      <path d="M96 14V76" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="3 3" fill="none"/>
+    </svg>
+    <div>
+      <p class="course">Assignment 4</p>
+      <h3>Gamma-Ray Threat Confidence</h3>
+      <p class="desc">Fuzzy logic, from hand calculations to a working system. Problems 1 to 3 cover the extension principle and a tank-level controller. Problem 4 is a Mamdani system that turns four features of a 1024-bin gamma spectrum into a threat confidence from 0 to 100, with sixteen rules and five test scenarios.</p>
+      <ul class="tags"><li>Fuzzy logic</li><li>Mamdani inference</li><li>Spectrum features</li></ul>
+      <a class="open" href="ai-a4-gamma-fis/demo.html" target="_blank" rel="noopener">Open the live demo &rarr;</a>
+    </div>
+  </article>
+
+  <div class="sec-head"><h2>Analysis of Power Systems</h2><span>EE 5243, Fall 2026</span></div>
+
+  <article class="project">
+    <svg class="motif" viewBox="0 0 150 90" role="img" aria-label="Nominal pi model of a transmission line">
+      <g stroke="var(--brand)" stroke-width="1.8" fill="none"><path d="M8 30H40"/><rect x="40" y="22" width="70" height="16" fill="var(--surface)"/><path d="M110 30H142"/>
+      <path d="M32 30V48M22 48H42M22 54H42M32 54V70M18 70H46"/><path d="M118 30V48M108 48H128M108 54H128M118 54V70M104 70H132"/></g>
+    </svg>
+    <div>
+      <p class="course">Homework 5</p>
+      <h3>Transmission Line Calculator</h3>
+      <p class="desc">An interactive version of the line-modeling problems. Enter a three-phase line and a load, and it solves the short-line, nominal pi, and exact models side by side, then plots voltage regulation against length so you can see where the simple models fail. It also builds the equivalent pi circuit.</p>
+      <p class="desc" style="font-size:14px">The same course covered phasors and complex power, three-phase circuits, nodal analysis, transformer equivalent circuits and delta-wye phase shift, and per-unit reactance diagrams. I keep my worked solutions for my own study and do not post them here.</p>
+      <ul class="tags"><li>ABCD parameters</li><li>Voltage regulation</li><li>Per-unit analysis</li><li>Transformers</li></ul>
+      <a class="open" href="power-systems-line-calculator/demo.html" target="_blank" rel="noopener">Open the live calculator &rarr;</a>
+    </div>
+  </article>
+
+  <div class="sec-head"><h2>Linear Systems and Control</h2><span>EE 5143, Fall 2026</span></div>
+
+  <article class="project">
+    <svg class="motif" viewBox="0 0 150 90" role="img" aria-label="Pole-zero style plot with a stable and an unstable pole">
+      <path d="M10 45H140M75 10V80" stroke="var(--line2)" stroke-width="1.2" fill="none"/>
+      <g stroke="var(--brand)" stroke-width="2" fill="none"><path d="M36 37L46 53M46 37L36 53"/><path d="M104 37L114 53M114 37L104 53" stroke="var(--high)"/></g>
+      <path d="M75 10V80" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 3" fill="none"/>
+    </svg>
+    <div>
+      <p class="course">Homework 1, Problems 4 to 6</p>
+      <h3>LTI System Explorer</h3>
+      <p class="desc">Convolution as the zero-state response, the transfer function and impulse response, and a state-space realization, turned into a tested Python package and a browser demo. Scrub a convolution, or drag the coefficients and watch the poles, stability, and state-space matrices update.</p>
+      <ul class="tags"><li>Convolution</li><li>Transfer functions</li><li>State space</li><li>Python, 11 tests</li></ul>
+      <a class="open" href="linear-systems-lti-explorer/demo.html" target="_blank" rel="noopener">Open the live demo &rarr;</a>
+    </div>
+  </article>
+
+  <section class="block">
+    <div class="sec-head" style="margin-top:56px"><h2>Film</h2><span>Austin Shorts Fest, 2026</span></div>
+    <div style="margin-top:22px">
+      <h3>Otilia</h3>
+      <p class="fact">Short film &middot; Executive producer</p>
+      <p>Official selection at the Austin Shorts Fest in 2026, and nominated for Best Film and Best Narrative. I proposed myself for the role with no film experience, then managed the logistics and the crew with a teacher's habits and an engineer's problem solving.</p>
+    </div>
+    <div class="film-grid">
+      <figure><img src="img/otilia-official-selection.jpg" alt="Otilia poster with the Austin Shorts Fest 2026 Official Selection laurel" width="900" height="1110"><figcaption>Official selection, 2026</figcaption></figure>
+      <figure><img src="img/best-narrative-nominees.jpg" alt="Austin Shorts Fest Best Narrative nominees graphic, including Otilia" width="900" height="1175"><figcaption>Nominee, Best Narrative</figcaption></figure>
+      <figure><img src="img/best-film-nominees.jpg" alt="Austin Shorts Fest Best Film nominees graphic, including Otilia" width="900" height="1180"><figcaption>Nominee, Best Film</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="sec-head" style="margin-top:56px"><h2>LEKE IS THE CULTURE</h2><span>Founder</span></div>
+    <div style="margin-top:22px">
+      <p>The company I'm building around filmmaking, education, and community. The LEKE Digital Center is the learning center I'm developing: after-school and weekend STEM with hands-on electronics, run at low cost and designed to repeat in other places.</p>
+      <a class="link" href="https://www.instagram.com/leke_is_the_culture/" target="_blank" rel="noopener">@leke_is_the_culture on Instagram</a>
+    </div>
+  </section>
+
+  <footer>Course work from the University of Texas at San Antonio. Demos are my own implementations of the assignment designs. <a class="link" href="https://github.com/DavidToure/utsa-ee-portfolio" target="_blank" rel="noopener">Code on GitHub</a>.</footer>
+</div>
+</body>
+</html>

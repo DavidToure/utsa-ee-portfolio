@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Transmission Line Calculator</title>
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: line and load inputs on the left; model comparison, a regulation-versus-length chart, and the equivalent pi circuit on the right. */
+:root{
+  --bg:#f1f3f0; --surface:#fafbf9; --surface2:#e8ece8;
+  --ink:#14201e; --ink2:#44524f; --muted:#6d7b77;
+  --line:rgba(20,32,30,.13); --line2:rgba(20,32,30,.26);
+  --brand:#1f4e5f; --brand-ink:#ffffff; --brand-tint:#dbe8ec;
+  --low:#2f7f8f; --med:#a9741a; --high:#c2461f;
+  --signal:#c2461f; --signal-tint:rgba(194,70,31,.16);
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+    --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+    --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+    --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+    --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+    --signal:#ef7a52; --signal-tint:rgba(239,122,82,.22);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+  --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+  --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+  --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+  --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+  --signal:#ef7a52; --signal-tint:rgba(239,122,82,.22);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;padding-inline:16px;padding-block:32px 64px}
+.wrap{max-width:1120px;margin:0 auto}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--brand);font-weight:600}
+h1{font-family:var(--display);font-size:clamp(28px,5vw,44px);line-height:1.08;margin:8px 0 10px;letter-spacing:-.015em;text-wrap:balance}
+header p{margin:0;max-width:66ch;color:var(--ink2);font-size:15.5px}
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;margin-top:26px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.panel h2{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:0 0 12px;font-weight:600}
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+button{font:inherit}
+.btn{font-size:13px;padding:7px 13px;border-radius:8px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+.btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.field input,.field select{font-family:var(--mono);font-size:13px;padding:5px 7px;border:1px solid var(--line2);border-radius:6px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.mono,th.num{font-family:var(--mono)}
+th.num,td.num{text-align:right}
+footer{margin-top:28px;font-size:12.5px;color:var(--muted);max-width:80ch}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:9px}
+.gl{stroke:var(--line);stroke-width:1}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:6px;background:var(--surface2);color:var(--ink2)}
+.pill.hot{background:var(--signal-tint);color:var(--signal);font-weight:600}
+
+.presets .btn{font-size:12.5px}
+.f-row{margin-top:12px}
+.f-row label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px}
+.f-row .v{font-family:var(--mono);font-weight:600}
+.sub{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:18px 0 8px;font-weight:600;border-top:1px solid var(--line);padding-top:12px}
+.cols th.model,.cols td.model{text-align:right}
+td.lab{color:var(--ink2)}
+tr.hi td{font-weight:600}
+.hl{background:var(--signal-tint)}
+.chart{width:100%;height:auto;display:block}
+.cu{fill:none;stroke-width:2}
+.lg{display:flex;flex-wrap:wrap;gap:6px 16px;font-family:var(--mono);font-size:12px;color:var(--ink2);margin-top:6px}
+.lg i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+.eq{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 18px;font-family:var(--mono);font-size:13px;margin-top:8px}
+.eq div span{color:var(--muted);font-size:11.5px;display:block}
+.eqsvg{width:100%;max-width:420px;height:auto;display:block;margin:6px 0 4px}
+.takeaway{font-size:14px;color:var(--ink2);margin:10px 0 0;max-width:62ch}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">EE 5243 &middot; Analysis of Power Systems &middot; Transmission lines</div>
+    <h1>Transmission Line Calculator</h1>
+    <p>Enter a three-phase line and a load. The calculator finds the sending-end voltage, current, power, and voltage regulation with three models: the short line, the nominal pi, and the exact hyperbolic solution. Lengthen the line and see where the simple models stop being good enough.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Line and load</h2>
+      <div class="row presets">
+        <button class="btn" id="p52" type="button">Problem 5.2 line</button>
+        <button class="btn" id="p514" type="button">Problem 5.14 line, sample load</button>
+      </div>
+      <div class="f-row"><label for="len">Length <span class="v" id="lenV"></span></label><input id="len" type="range" min="10" max="600" step="5"></div>
+      <div class="sub">Per-kilometer line data</div>
+      <div class="fields">
+        <label class="field" for="r">r (ohm/km)<input id="r" type="number" step="0.005" min="0"></label>
+        <label class="field" for="x">x (ohm/km)<input id="x" type="number" step="0.01" min="0.01"></label>
+        <label class="field" for="b">b (microS/km)<input id="b" type="number" step="0.01" min="0.01"></label>
+      </div>
+      <div class="sub">Load at the receiving end</div>
+      <div class="fields">
+        <label class="field" for="kv">Voltage (kV, line to line)<input id="kv" type="number" step="1" min="1"></label>
+        <label class="field" for="mw">Real power (MW)<input id="mw" type="number" step="5" min="0"></label>
+        <label class="field" for="pf">Power factor<input id="pf" type="number" step="0.01" min="0.5" max="1"></label>
+        <label class="field" for="lead">Current<select id="lead"><option value="lag">lagging</option><option value="lead">leading</option></select></label>
+      </div>
+      <p class="takeaway" id="msg"></p>
+    </section>
+
+    <div class="stack">
+      <section class="panel" aria-live="polite">
+        <h2>Model comparison</h2>
+        <div class="tbl-wrap"><table class="cols">
+          <thead><tr><th></th><th class="num model">Short line</th><th class="num model">Nominal pi</th><th class="num model">Exact</th></tr></thead>
+          <tbody id="cmp"></tbody>
+        </table></div>
+        <p class="takeaway" id="take"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Voltage regulation versus length</h2>
+        <svg class="chart" id="chart" viewBox="0 0 620 260" role="img" aria-label="Voltage regulation in percent against line length for three models"></svg>
+        <div class="lg"><span><i style="background:var(--low)"></i>Short line</span><span><i style="background:var(--med)"></i>Nominal pi</span><span><i style="background:var(--signal)"></i>Exact</span></div>
+      </section>
+
+      <section class="panel">
+        <h2>Equivalent pi circuit, exact line</h2>
+        <svg class="eqsvg" viewBox="0 0 300 100" role="img" aria-label="Equivalent pi circuit with series Z prime and shunt Y prime over 2">
+          <g stroke="var(--brand)" stroke-width="1.8" fill="none"><path d="M8 28H70"/><rect x="70" y="18" width="110" height="20" fill="var(--surface)"/><path d="M180 28H292"/>
+          <path d="M50 28V52M40 52H60M40 58H60M50 58V80M36 80H64"/><path d="M230 28V52M220 52H240M220 58H240M230 58V80M216 80H244"/></g>
+          <text x="125" y="14" text-anchor="middle" style="font-size:11px">Z'</text><text x="50" y="94" text-anchor="middle" style="font-size:11px">Y'/2</text><text x="230" y="94" text-anchor="middle" style="font-size:11px">Y'/2</text>
+        </svg>
+        <div class="eq" id="eq"></div>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    Built from Glover problems 5.2, 5.14 and 5.23. Per-phase analysis of a balanced three-phase line. Voltage regulation is (|VS|/|A| minus |VR,full load|) divided by |VR,full load|. For problem 5.2 the nominal-pi results are 269.2 kV, 635 A, 26.4 percent regulation, and 270.8 MW sent, which match my worked solution. The exact model uses Zc = sqrt(z/y), gamma l = l sqrt(zy), A = D = cosh(gamma l), B = Zc sinh(gamma l), C = sinh(gamma l)/Zc.
+  </footer>
+</div>
+
+<script>
+// Transmission line models: short, nominal pi, exact (hyperbolic). 3-phase, balanced, per-phase analysis.
+const C = {
+  add:(a,b)=>({re:a.re+b.re,im:a.im+b.im}), sub:(a,b)=>({re:a.re-b.re,im:a.im-b.im}),
+  mul:(a,b)=>({re:a.re*b.re-a.im*b.im,im:a.re*b.im+a.im*b.re}),
+  div:(a,b)=>{const d=b.re*b.re+b.im*b.im;return{re:(a.re*b.re+a.im*b.im)/d,im:(a.im*b.re-a.re*b.im)/d};},
+  sc:(a,k)=>({re:a.re*k,im:a.im*k}), abs:a=>Math.hypot(a.re,a.im), arg:a=>Math.atan2(a.im,a.re),
+  polar:(r,t)=>({re:r*Math.cos(t),im:r*Math.sin(t)}), conj:a=>({re:a.re,im:-a.im}),
+  sqrt:a=>{const r=Math.hypot(a.re,a.im),t=Math.atan2(a.im,a.re);return C.polar(Math.sqrt(r),t/2);},
+  cosh:a=>({re:Math.cosh(a.re)*Math.cos(a.im),im:Math.sinh(a.re)*Math.sin(a.im)}),
+  sinh:a=>({re:Math.sinh(a.re)*Math.cos(a.im),im:Math.cosh(a.re)*Math.sin(a.im)}),
+};
+function abcd(model, p, len){
+  const z = {re:p.r, im:p.x}, y = {re:0, im:p.b*1e-6};      // per km, b in microsiemens
+  const Z = C.sc(z, len), Y = C.sc(y, len);
+  if (model === "short") return { A:{re:1,im:0}, B:Z, C:{re:0,im:0}, D:{re:1,im:0} };
+  if (model === "nominal"){
+    const YZ = C.mul(Y, Z);
+    const A = {re:1 + YZ.re/2, im:YZ.im/2};
+    const Cc = C.mul(Y, {re:1 + YZ.re/4, im:YZ.im/4});
+    return { A, B:Z, C:Cc, D:A };
+  }
+  const Zc = C.sqrt(C.div(z, y));
+  const gl = C.sc(C.sqrt(C.mul(z, y)), len);
+  const A = C.cosh(gl);
+  return { A, B:C.mul(Zc, C.sinh(gl)), C:C.div(C.sinh(gl), Zc), D:A, Zc, gl };
+}
+function solve(model, p, len){
+  const m = abcd(model, p, len);
+  const VLL = p.kv * 1e3, VR = {re:VLL/Math.sqrt(3), im:0};
+  const mag = p.mw * 1e6 / (Math.sqrt(3) * VLL * p.pf);
+  const th = Math.acos(p.pf) * (p.lead ? 1 : -1);
+  const IR = C.polar(mag, th);
+  const VS = C.add(C.mul(m.A, VR), C.mul(m.B, IR));
+  const IS = C.add(C.mul(m.C, VR), C.mul(m.D, IR));
+  const SS = C.sc(C.mul(VS, C.conj(IS)), 3), SR = C.sc(C.mul(VR, C.conj(IR)), 3);
+  const vrNL = C.abs(VS) / C.abs(m.A);
+  return {
+    m, VS, IS, IR,
+    vsLL: C.abs(VS) * Math.sqrt(3) / 1e3, isA: C.abs(IS),
+    vr: (vrNL - C.abs(VR)) / C.abs(VR) * 100,
+    ps: SS.re / 1e6, loss: (SS.re - SR.re) / 1e6, eff: SR.re / SS.re * 100,
+    delta: C.arg(VS) * 180 / Math.PI,
+  };
+}
+const TL_DEFAULT = { r:0.08, x:0.48, b:3.33, kv:220, mw:250, pf:0.99, lead:false, len:200 };
+
+const $ = id => document.getElementById(id);
+let p = Object.assign({}, TL_DEFAULT);
+const PRESETS = {
+  p52: Object.assign({}, TL_DEFAULT),
+  p514: { r:0.03, x:0.35, b:4.4, kv:500, mw:1000, pf:0.95, lead:false, len:500 },
+};
+const MODELS = [["short","Short line"],["nominal","Nominal pi"],["exact","Exact"]];
+const ph = a => (C.arg(a) * 180 / Math.PI);
+function setInputs(){
+  $("len").value = p.len; $("r").value = p.r; $("x").value = p.x; $("b").value = p.b;
+  $("kv").value = p.kv; $("mw").value = p.mw; $("pf").value = p.pf; $("lead").value = p.lead ? "lead" : "lag";
+}
+function readInputs(){
+  const g = id => parseFloat($(id).value);
+  const v = { r:g("r"), x:g("x"), b:g("b"), kv:g("kv"), mw:g("mw"), pf:g("pf"), len:g("len") };
+  if (Object.values(v).some(isNaN) || v.kv <= 0 || v.pf <= 0 || v.pf > 1 || v.x <= 0 || v.b <= 0 || v.r < 0 || v.mw < 0) return false;
+  p = Object.assign(p, v, { lead: $("lead").value === "lead" }); return true;
+}
+function chart(){
+  const lens = []; for (let l = 10; l <= 600; l += 10) lens.push(l);
+  const series = MODELS.map(([k]) => lens.map(l => solve(k, p, l).vr));
+  let lo = Math.min(...series.flat()), hi = Math.max(...series.flat());
+  lo = Math.min(lo, 0); const pad = (hi - lo) * .08 || 1; hi += pad; lo = lo < 0 ? lo - pad : 0;
+  const step = [1,2,5,10,20,25,50].find(s => (hi - lo) / s <= 6) || 100;
+  const W = 620, H = 260, L = 44, R = 70, T = 12, B = 30, pw = W - L - R, ph2 = H - T - B;
+  const X = l => L + (l - 10) / 590 * pw, Y = v => T + (1 - (v - lo) / (hi - lo)) * ph2;
+  let s = "";
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) s += `<line class="gl" x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 6}" y="${Y(v) + 3}" text-anchor="end">${v}%</text>`;
+  [100,200,300,400,500,600].forEach(l => s += `<text x="${X(l)}" y="${H - 10}" text-anchor="middle">${l} km</text>`);
+  const cols = ["var(--low)","var(--med)","var(--signal)"];
+  series.forEach((vals, i) => {
+    s += `<polyline class="cu" stroke="${cols[i]}" points="${vals.map((v, j) => X(lens[j]).toFixed(1) + "," + Y(v).toFixed(1)).join(" ")}"/>`;
+    const last = vals[vals.length - 1];
+    s += `<text x="${W - R + 6}" y="${Y(last) + 3}" style="fill:var(--ink2);font-size:10px">${MODELS[i][1].replace(" line","")}</text>`;
+  });
+  const cx = X(Math.min(600, Math.max(10, p.len)));
+  s += `<line x1="${cx}" x2="${cx}" y1="${T}" y2="${T + ph2}" stroke="var(--ink)" stroke-width="1.2" stroke-dasharray="3 3"/>`;
+  MODELS.forEach(([k], i) => { s += `<circle cx="${cx}" cy="${Y(solve(k, p, p.len).vr)}" r="3.8" fill="${cols[i]}" stroke="var(--surface)" stroke-width="1.5"/>`; });
+  $("chart").innerHTML = s;
+}
+function render(){
+  $("lenV").textContent = p.len + " km";
+  const res = {}; MODELS.forEach(([k]) => res[k] = solve(k, p, p.len));
+  const f = (v, d) => v.toFixed(d);
+  const rows = [
+    ["|A|", k => f(C.abs(res[k].m.A), 4)],
+    ["|B| (ohm)", k => f(C.abs(res[k].m.B), 2)],
+    ["|C| (mS)", k => f(C.abs(res[k].m.C) * 1000, 4)],
+    ["Sending voltage (kV, L-L)", k => f(res[k].vsLL, 2), true],
+    ["Sending current (A)", k => f(res[k].isA, 1)],
+    ["Voltage regulation (%)", k => f(res[k].vr, 2), true],
+    ["Sending real power (MW)", k => f(res[k].ps, 2)],
+    ["Line loss (MW)", k => f(res[k].loss, 2)],
+    ["Efficiency (%)", k => f(res[k].eff, 2)],
+    ["Power angle (deg)", k => f(res[k].delta, 2)],
+  ];
+  $("cmp").innerHTML = rows.map(r => `<tr class="${r[2] ? "hi" : ""}"><td class="lab">${r[0]}</td>${MODELS.map(([k]) => `<td class="num mono${k === "exact" ? " hl" : ""}">${r[1](k)}</td>`).join("")}</tr>`).join("");
+  const dv = res.nominal.vr - res.exact.vr, dvs = res.short.vr - res.exact.vr;
+  $("take").textContent = `At ${p.len} km the nominal pi differs from the exact answer by ${Math.abs(dv).toFixed(2)} points of regulation, and the short-line model by ${Math.abs(dvs).toFixed(2)} points. ` +
+    (Math.abs(dv) < 0.5 ? "The nominal pi is a good approximation here." : "Past this point the exact model is worth using.");
+  const ex = res.exact.m, Zp = C.mul(ex.Zc, C.sinh(ex.gl)), Yp2 = C.div(C.div(C.sinh(ex.gl), C.cosh(ex.gl)), ex.Zc);
+  const th = C.div(C.sinh(C.sc(ex.gl, .5)), C.cosh(C.sc(ex.gl, .5)));
+  const Yh = C.div(th, ex.Zc);
+  const Zn = {re:p.r * p.len, im:p.x * p.len}, Yn2 = p.b * 1e-6 * p.len / 2;
+  $("eq").innerHTML =
+    `<div><span>Zc (ohm)</span>${f(C.abs(ex.Zc), 2)} &ang; ${f(ph(ex.Zc), 2)}&deg;</div>` +
+    `<div><span>gamma l</span>${f(ex.gl.re, 4)} + j${f(ex.gl.im, 4)}</div>` +
+    `<div><span>Z' = Zc sinh(gamma l) (ohm)</span>${f(Zp.re, 2)} + j${f(Zp.im, 2)}</div>` +
+    `<div><span>Y'/2 = tanh(gamma l / 2) / Zc (S)</span>${(Yh.re * 1e6).toFixed(2)}e-6 + j${(Yh.im * 1e6).toFixed(2)}e-6</div>` +
+    `<div><span>Nominal Z (ohm)</span>${f(Zn.re, 2)} + j${f(Zn.im, 2)}</div>` +
+    `<div><span>Nominal Y/2 (S)</span>j${(Yn2 * 1e6).toFixed(2)}e-6</div>`;
+  chart();
+}
+["len","r","x","b","kv","mw","pf","lead"].forEach(id => $(id).addEventListener("input", () => { if (readInputs()) render(); }));
+$("p52").addEventListener("click", () => { p = Object.assign({}, PRESETS.p52); setInputs(); render(); });
+$("p514").addEventListener("click", () => { p = Object.assign({}, PRESETS.p514); setInputs(); render(); });
+setInputs(); render();
+</script>
+</body>
+</html>

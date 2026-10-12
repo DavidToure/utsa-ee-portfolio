@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rule-Based Vending Machine</title>
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: the machine (balance, stock, controls) on the left, the rule log on the right. */
+:root{
+  --bg:#f1f3f0; --surface:#fafbf9; --surface2:#e8ece8;
+  --ink:#14201e; --ink2:#44524f; --muted:#6d7b77;
+  --line:rgba(20,32,30,.13); --line2:rgba(20,32,30,.26);
+  --brand:#1f4e5f; --brand-ink:#ffffff; --brand-tint:#dbe8ec;
+  --low:#2f7f8f; --med:#a9741a; --high:#c2461f;
+  --signal:#c2461f; --signal-tint:rgba(194,70,31,.16);
+  --display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+    --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+    --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+    --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+    --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+    --signal:#ef7a52; --signal-tint:rgba(239,122,82,.22);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1514; --surface:#162120; --surface2:#1d2b29;
+  --ink:#e8efec; --ink2:#b4c1bd; --muted:#82918d;
+  --line:rgba(232,239,236,.13); --line2:rgba(232,239,236,.26);
+  --brand:#6cc0d4; --brand-ink:#08181d; --brand-tint:rgba(108,192,212,.14);
+  --low:#5bb5c6; --med:#e0a63a; --high:#ef7a52;
+  --signal:#ef7a52; --signal-tint:rgba(239,122,82,.22);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;padding-inline:16px;padding-block:32px 64px}
+.wrap{max-width:1120px;margin:0 auto}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--brand);font-weight:600}
+h1{font-family:var(--display);font-size:clamp(28px,5vw,44px);line-height:1.08;margin:8px 0 10px;letter-spacing:-.015em;text-wrap:balance}
+header p{margin:0;max-width:66ch;color:var(--ink2);font-size:15.5px}
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;margin-top:26px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.panel h2{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink2);margin:0 0 12px;font-weight:600}
+.stack{display:flex;flex-direction:column;gap:20px;min-width:0}
+button{font:inherit}
+.btn{font-size:13px;padding:7px 13px;border-radius:8px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+.btn[aria-pressed="true"]{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.field input,.field select{font-family:var(--mono);font-size:13px;padding:5px 7px;border:1px solid var(--line2);border-radius:6px;background:var(--surface);color:var(--ink);width:100%;min-width:0}
+.fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+input[type=range]{width:100%;accent-color:var(--brand)}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line2);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+td.mono,th.num{font-family:var(--mono)}
+th.num,td.num{text-align:right}
+footer{margin-top:28px;font-size:12.5px;color:var(--muted);max-width:80ch}
+svg text{fill:var(--muted);font-family:var(--mono);font-size:9px}
+.gl{stroke:var(--line);stroke-width:1}
+.pill{display:inline-block;font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:6px;background:var(--surface2);color:var(--ink2)}
+.pill.hot{background:var(--signal-tint);color:var(--signal);font-weight:600}
+
+.display{background:var(--ink);color:var(--bg);border-radius:10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.display .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+.display .num{font-family:var(--mono);font-weight:600;font-size:34px;line-height:1.1}
+.stock{margin-top:12px}
+.stock .track{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:5px}
+.stock .fill{display:block;height:100%;background:var(--brand);border-radius:4px}
+.stock .lbl{font-family:var(--mono);font-size:12px;color:var(--ink2);display:flex;justify-content:space-between}
+.sec{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.sec h3{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 8px;font-weight:600}
+.coins button,.drinks button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:68px;padding:8px 10px}
+.coins .l,.drinks .l{font-family:var(--mono);font-weight:600;font-size:15px}
+.coins .v,.drinks .v{font-size:11.5px;color:var(--muted)}
+.drinks button[aria-pressed="true"] .v{color:inherit;opacity:.85}
+.chain{display:flex;gap:8px;margin-top:10px}
+.chain input{flex:1;min-width:0;font-family:var(--mono);font-size:14px;padding:7px 9px;border:1px solid var(--line2);border-radius:8px;background:var(--surface);color:var(--ink);text-transform:uppercase}
+.log{display:flex;flex-direction:column}
+.entry{display:grid;grid-template-columns:minmax(0,170px) minmax(0,1fr);gap:12px;padding:9px 0;border-top:1px solid var(--line);font-size:13px}
+.entry:first-child{border-top:none}
+.entry .rule{font-family:var(--mono);font-size:11.5px;font-weight:600;color:var(--brand)}
+.entry.err .rule{color:var(--signal)}
+.entry .txt{min-width:0;overflow-wrap:anywhere}
+@media (max-width:520px){.entry{grid-template-columns:minmax(0,1fr);gap:2px}}
+.empty{color:var(--muted);font-size:13.5px}
+.rules{font-size:12.5px;color:var(--ink2);margin:0;padding-left:18px}
+.rules li{margin:3px 0}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">EE 5663 &middot; Assignment 2 &middot; Rule-based systems</div>
+    <h1>Rule-Based Vending Machine</h1>
+    <p>A vending machine for tea, coffee, and hot chocolate, run entirely by IF-THEN rules. It takes coins before it activates the buttons, keeps credit across several drinks, and returns change when you are done. Every action below names the rule that fired.</p>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Machine</h2>
+      <div class="display">
+        <div><div class="lbl">Balance M</div><div class="num" id="bal">$0.00</div></div>
+        <div style="text-align:right"><div class="lbl">Selected</div><div class="num" id="sel" style="font-size:20px">none</div></div>
+      </div>
+      <div class="stock"><div class="lbl"><span>Shared stock</span><span id="stockTxt">20 of 20</span></div><div class="track"><span class="fill" id="stockFill" style="width:100%"></span></div></div>
+
+      <div class="sec">
+        <h3>1. Insert coins</h3>
+        <div class="row coins" id="coins"></div>
+        <div class="chain">
+          <input id="chain" type="text" autocomplete="off" spellcheck="false" aria-label="Coin letters" placeholder="Coin letters, e.g. QQD">
+          <button class="btn primary" id="insert" type="button">Insert</button>
+        </div>
+      </div>
+      <div class="sec">
+        <h3>2. Pick a drink</h3>
+        <div class="row drinks" id="drinks"></div>
+      </div>
+      <div class="sec">
+        <h3>3. Finish</h3>
+        <div class="row"><button class="btn" id="done" type="button">Done, return change</button><button class="btn" id="reset" type="button">Reset machine</button></div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="panel" aria-live="polite">
+        <h2>Rule log</h2>
+        <div class="log" id="log"></div>
+      </section>
+      <section class="panel">
+        <h2>The rules</h2>
+        <ol class="rules">
+          <li><b>Money Rule 1.</b> If a recognized coin is inserted, add its value to M.</li>
+          <li><b>Error rule.</b> If a letter is not a coin or a drink, say so and ask again. If stock is empty, refill it.</li>
+          <li><b>Drink dispensary rule 1.</b> If M is at least the price, dispense the drink and subtract the price. The rest stays as credit.</li>
+          <li><b>Drink dispensary rule 2.</b> If M is less than the price, ask for more coins and check the same drink again.</li>
+          <li><b>Change rule.</b> When the customer is done, return M as change and reset it to zero.</li>
+        </ol>
+      </section>
+    </div>
+  </div>
+
+  <footer>
+    Built from EE 5663 Assignment 2. Prices are tea $0.25, coffee $0.50, hot chocolate $0.30. Coins are P ($0.01), N ($0.05), D ($0.10), Q ($0.25), F ($0.50). One shared stock of 20 covers all three drinks. The engine is a direct port of my MATLAB function, with the same rules and messages.
+  </footer>
+</div>
+
+<script>
+// Port of vending_machine_DT.m (HW2). One shared stock count, running credit, change returned when the customer is done.
+const COINS = { P:1, N:5, D:10, Q:25, F:50 };
+const DRINKS = { T:{ name:"Tea", price:25 }, C:{ name:"Coffee", price:50 }, H:{ name:"Hot Chocolate", price:30 } };
+function newMachine(){ return { M:0, stock:20, pending:null, log:[] }; }
+function say(m, rule, text){ m.log.unshift({ rule, text }); }
+function usd(c){ return "$" + (c / 100).toFixed(2); }
+function recheck(m){
+  const d = m.pending;
+  if (!d) return;
+  if (m.M >= DRINKS[d].price){
+    m.M -= DRINKS[d].price; m.stock -= 1; m.pending = null;
+    say(m, "Drink dispensary rule 1", `Dispensing ${DRINKS[d].name}. Credit left: ${usd(m.M)}`);
+  } else {
+    say(m, "Drink dispensary rule 2", "Not enough money. Insert more coins.");
+  }
+}
+function insertCoins(m, chain){
+  chain = chain.toUpperCase();
+  if (!chain.length) return m;
+  for (const c of chain){
+    if (COINS[c] !== undefined){ m.M += COINS[c]; }
+    else say(m, "Error rule", `"${c}" is not a recognized coin.`);
+  }
+  say(m, "Money Rule 1", `M = ${usd(m.M)}`);
+  recheck(m);
+  return m;
+}
+function selectDrink(m, d){
+  d = d.toUpperCase();
+  if (!DRINKS[d]){ say(m, "Error rule", "Not a valid drink letter."); return m; }
+  if (m.stock <= 0){ say(m, "Error rule", "Out of stock. Refilling..."); m.stock = 20; }
+  m.pending = d;
+  recheck(m);
+  return m;
+}
+function finish(m){
+  m.pending = null;
+  if (m.M > 0){ say(m, "Change rule", `Returning ${usd(m.M)} in change.`); m.M = 0; }
+  else say(m, "Change rule", "No change to return.");
+  return m;
+}
+
+let m = newMachine();
+const usdf = c => "$" + (c / 100).toFixed(2);
+function build(){
+  const coins = document.getElementById("coins");
+  Object.keys(COINS).forEach(k => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.id = "coin" + k;
+    b.innerHTML = `<span class="l">${k}</span><span class="v">${usdf(COINS[k])}</span>`;
+    b.addEventListener("click", () => { insertCoins(m, k); render(); });
+    coins.appendChild(b);
+  });
+  const dr = document.getElementById("drinks");
+  Object.keys(DRINKS).forEach(k => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "btn"; b.id = "drink" + k;
+    b.innerHTML = `<span class="l">${k}</span><span class="v">${DRINKS[k].name}, ${usdf(DRINKS[k].price)}</span>`;
+    b.addEventListener("click", () => { selectDrink(m, k); render(); });
+    dr.appendChild(b);
+  });
+}
+function render(){
+  document.getElementById("bal").textContent = usdf(m.M);
+  document.getElementById("sel").textContent = m.pending ? DRINKS[m.pending].name : "none";
+  document.getElementById("stockTxt").textContent = `${m.stock} of 20`;
+  document.getElementById("stockFill").style.width = (m.stock / 20 * 100) + "%";
+  Object.keys(DRINKS).forEach(k => document.getElementById("drink" + k).setAttribute("aria-pressed", m.pending === k));
+  const log = document.getElementById("log");
+  log.innerHTML = m.log.length ? m.log.map(l => `<div class="entry${/^Error/.test(l.rule) ? " err" : ""}"><span class="rule">${l.rule}</span><span class="txt">${l.text}</span></div>`).join("")
+    : `<div class="empty">Nothing yet. Insert a coin to start. The first line will show Money Rule 1 firing.</div>`;
+}
+document.getElementById("insert").addEventListener("click", () => {
+  const el = document.getElementById("chain"); insertCoins(m, el.value.trim()); el.value = ""; render();
+});
+document.getElementById("chain").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("insert").click(); });
+document.getElementById("done").addEventListener("click", () => { finish(m); render(); });
+document.getElementById("reset").addEventListener("click", () => { m = newMachine(); render(); });
+build();
+// start with a short example already run, so the log shows real rule firings
+insertCoins(m, "QQ"); selectDrink(m, "T"); selectDrink(m, "H");
+render();
+</script>
+</body>
+</html>
