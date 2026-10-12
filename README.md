@@ -1,5 +1,7 @@
 # UTSA MS EE Portfolio
 
+**Live site:** https://davidtoure.github.io/utsa-ee-portfolio/
+
 Projects from my first semester of the MS in Electrical Engineering at UTSA (Fall 2026). Each folder turns a course assignment into something you can run: working code, a live demo, and a short note on how it maps back to the assignment.
 
 | Folder | Course | What it is |
@@ -13,7 +15,7 @@ Projects from my first semester of the MS in Electrical Engineering at UTSA (Fal
 
 ## Running things
 
-- **Browser demos:** open any `demo.html` directly in a browser. There is no server and no build step.
+- **Browser demos:** open any `demo.html` directly in a browser, or use the live site above. There is no server and no build step.
 - **Python projects:** `pip install pytest numpy`, then run `python3 -m pytest` inside the folder.
 - **MATLAB files:** run the function named by the file. The gamma-ray script also needs the five course-provided `Scenario*.txt` data files, which are not included here.
 
